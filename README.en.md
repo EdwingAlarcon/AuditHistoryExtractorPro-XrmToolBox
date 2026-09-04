@@ -9,9 +9,8 @@
 [XrmToolBox](https://www.xrmtoolbox.com/) plugin to **extract, export, and validate Dataverse
 audit history** on demand, without deploying a dedicated app.
 
-> The rest of the repository (deeper docs, code comments, UI text) is in Spanish. This README
-> is the English entry point for the project; see [`docs/README.md`](docs/README.md) (Spanish)
-> for the full technical detail and roadmap.
+> The rest of the repository (code comments, UI text) is in Spanish, but the deeper technical
+> doc is also available in English: [`docs/README.en.md`](docs/README.en.md).
 
 ## Features
 
@@ -23,7 +22,7 @@ audit history** on demand, without deploying a dedicated app.
 Does not include security role reporting or background/incremental extraction jobs; it also
 doesn't persist history between sessions — the plugin starts blank every time, though exported
 files do remain on disk. See
-[`docs/README.md`](docs/README.md#alcance-decidido-con-el-usuario) (Spanish) for the detail and
+[`docs/README.en.md`](docs/README.en.md#scope-decided-with-the-user) for the detail and
 rationale behind each decision.
 
 ## Requirements
@@ -35,7 +34,7 @@ rationale behind each decision.
 ## Installation
 
 This plugin is **not yet published on the XrmToolBox Plugin Store** (see
-[project status](docs/README.md#estado-actual), Spanish) — it needs to be installed manually.
+[project status](docs/README.en.md#current-status)) — it needs to be installed manually.
 XrmToolBox's Tool Library doesn't always show a visible "Install from disk" option depending on
 the host version; the method that works on any version is copying the DLLs directly into
 XrmToolBox's `Plugins` folder:
@@ -87,14 +86,14 @@ packaging/
 ## Project status
 
 Builds end-to-end and packaging is verified, but **it hasn't been tested against a real
-XrmToolBox/Dataverse instance yet**. See [`docs/README.md`](docs/README.md) (Spanish) for the
+XrmToolBox/Dataverse instance yet**. See [`docs/README.en.md`](docs/README.en.md) for the
 detailed status and short-term roadmap.
 
 ## Contributing
 
 Issues and pull requests are welcome. This is currently an internally-distributed project on
 its way to evaluating a Plugin Store release — see the roadmap in
-[`docs/README.md`](docs/README.md#próximos-pasos-roadmap-corto) (Spanish).
+[`docs/README.en.md`](docs/README.en.md#next-steps-short-roadmap).
 
 ## License
 

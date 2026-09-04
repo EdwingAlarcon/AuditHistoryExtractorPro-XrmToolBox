@@ -1,5 +1,7 @@
 # Audit History Extractor Pro — Plugin XrmToolBox
 
+🌐 [English](README.en.md) | **Español**
+
 Plugin de XrmToolBox para extraer, exportar y validar el historial de auditoría de Dataverse
 bajo demanda, dentro del modelo de host interactivo de un solo usuario que ofrece XrmToolBox.
 
