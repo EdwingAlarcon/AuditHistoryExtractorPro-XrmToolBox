@@ -24,10 +24,13 @@ solo usuario que ofrece XrmToolBox.
   a .NET 8 sin reevaluar la adopción real de "XrmToolBox 2.0".
 - **Sin autenticación propia** — el plugin recibe `IOrganizationService`/`ConnectionDetail` ya
   autenticados desde el host (`PluginControlBase.UpdateConnection`).
-- **Distribución:** ahora interna (`.nupkg` local, "Install from disk"). Meta declarada por el
-  usuario: publicación pública en el XrmToolBox Plugin Store una vez validado con usuarios
-  reales — diseñar/documentar pensando en eventual certificación pública, pero sin bloquear el
-  avance por eso todavía.
+- **Distribución:** ahora interna. La Tool Library de XrmToolBox no siempre expone "Install
+  from disk" según la versión del host — el método confiable es copiar los DLLs a la carpeta
+  `Plugins` del host (ver `docs/README.md`); el `.nupkg` queda como alternativa para cuando esa
+  opción sí está disponible, y es el formato que se necesitará igual para el Plugin Store más
+  adelante. Meta declarada por el usuario: publicación pública en el XrmToolBox Plugin Store
+  una vez validado con usuarios reales — diseñar/documentar pensando en eventual certificación
+  pública, pero sin bloquear el avance por eso todavía.
 
 ## Estado actual (última sesión: 2026-09-04)
 
@@ -57,15 +60,24 @@ Resumen:
   que reevaluar la decisión de target `net462`, no antes). Con `1.2023.10.67` no hizo falta
   tocar la API de `PluginControlBase`/`SettingsManager`/`IGitHubPlugin`/`IHelpPlugin`.
 - ✅ `PluginPackage.png` reemplazado por un ícono real de 32x32 (lupa sobre círculo azul).
-- ✅ `.nuspec` corregido: tenía la misma dependencia inexistente (`XrmToolBox.Extensibility
-  4.0.0`) que el `.csproj`, y además esa dependencia no debería declararse (el host ya trae
-  cargado `XrmToolBoxPackage`/`Extensibility` en el proceso). Se reemplazó por las dependencias
-  de terceros reales que sí necesita `Core.dll` en runtime y que el host no trae: `ClosedXML`,
-  `CsvHelper`, `Newtonsoft.Json`.
-- ✅ Empaquetado verificado: se generó `AuditHistoryExtractorPro.XrmToolBox.0.1.0.nupkg`
-  (`dotnet pack` sobre el `.nuspec`, ya que no hay `nuget.exe` en este entorno) y se confirmó
-  que contiene ambas DLLs (`Core`, `Plugin`) y `content/PluginPackage.png`. El `.nupkg` no se
-  versiona (`.gitignore` ya lo excluye) — hay que regenerarlo localmente antes de instalar.
+- ✅ `.nuspec` corregido dos veces: primero se sacó la dependencia NuGet inexistente
+  (`XrmToolBox.Extensibility 4.0.0`); después se corrigió la estructura completa siguiendo la
+  convención real de XrmToolBox (confirmada contra la wiki oficial de MscrmTools/XrmToolBox):
+  los DLLs van bajo `lib\net462\Plugins\` (no `lib\net462\` a secas), y las dependencias de
+  terceros (`ClosedXML` + su árbol — `DocumentFormat.OpenXml`, `ExcelNumberFormat`,
+  `SixLabors.Fonts`, `XLParser`, `Irony`, `System.IO.Packaging` —, `CsvHelper`) se incluyen
+  como **archivos** dentro de `<files>`, no como `<dependencies>` NuGet (ese mecanismo de
+  resolución no aplica al instalar un plugin en Tool Library).
+- ✅ Empaquetado verificado con `nuget.exe pack` real (descargado para esta sesión, ya que no
+  hay Visual Studio instalado acá) y se confirmó que el `.nupkg` contiene todo bajo
+  `lib\net462\Plugins\`. No se versiona (`.gitignore` ya lo excluye) — hay que regenerarlo
+  localmente antes de instalar.
+- ✅ Instalación manual documentada: como la Tool Library de XrmToolBox no siempre expone
+  "Install from disk" según la versión del host, se documentó (y es el método principal en
+  `docs/README.md`) copiar los DLLs directo a `%AppData%\MscrmTools\XrmToolBox\Plugins\` — el
+  propio proyecto (`Plugin.dll`, `Core.dll`), los 8 DLLs de terceros de arriba, y el ícono. No
+  copiar ensamblados del SDK/host (`Microsoft.Xrm.Sdk.dll`, `XrmToolBox.Extensibility.dll`,
+  etc.) — esos ya están cargados por el host y duplicarlos puede romper el assembly loading.
 - ⚠️ Sigue sin probarse contra una instancia real de XrmToolBox/Dataverse (solo se validó que
   compila, que los tests unitarios de `Core` pasan, y que el `.nupkg` empaqueta correctamente;
   no hay smoke test end-to-end con el host real). Ver instrucciones de prueba manual abajo.

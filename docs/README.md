@@ -19,10 +19,13 @@ correctamente. **Todavía no se probó contra una instancia real de XrmToolBox/D
   última versión que todavía publica binarios `net462` (desde `1.2025.7.71`, jul-2025, el
   paquete pasó a `net48` únicamente; usar una versión anterior a esa si se necesita net462).
 - ✅ `.nuspec` corregido: no declara `XrmToolBox.Extensibility`/`XrmToolBoxPackage` como
-  dependencia (el host ya la trae cargada), sí declara las dependencias de terceros reales
-  que el host no trae (`ClosedXML`, `CsvHelper`, `Newtonsoft.Json`).
+  dependencia NuGet (el host ya la trae cargada, y ese mecanismo de resolución no aplica en
+  Tool Library) — sigue la convención real de XrmToolBox: todos los archivos empaquetados
+  bajo `lib\net462\Plugins\`, incluyendo como archivos sueltos (no como "dependencias") los
+  ensamblados de terceros que el host no trae (`ClosedXML` y su árbol de dependencias,
+  `CsvHelper`).
 - ✅ `PluginPackage.png` es un ícono real de 32x32 (no un placeholder).
-- ✅ Empaquetado verificado con `dotnet pack` sobre el `.nuspec` (ver más abajo cómo generarlo).
+- ✅ Empaquetado verificado con `nuget.exe pack` sobre el `.nuspec` (ver más abajo cómo generarlo).
 
 ## Alcance (decidido con el usuario)
 
@@ -59,40 +62,49 @@ dotnet build AuditHistoryExtractorPro.XrmToolBox.sln -c Release
 
 (o desde Visual Studio 2022: abrir la `.sln`, seleccionar configuración `Release`, `Build Solution`).
 
-### 2. Generar el `.nupkg`
+### 2. Instalar en XrmToolBox: copiar los DLLs a la carpeta `Plugins`
 
-Si tenés `nuget.exe` (viene con Visual Studio, o [descargalo](https://www.nuget.org/downloads)):
+La Tool Library de XrmToolBox no siempre expone un botón "Install from disk" visible (varía
+según la versión del host) — el método que funciona en cualquier versión, incluso el que
+recomienda la propia guía de desarrollo de XrmToolBox para debug local, es copiar los
+ensamblados directamente a la carpeta `Plugins` del host:
+
+1. Ubicá la carpeta `Plugins` de tu instalación de XrmToolBox — normalmente
+   `%AppData%\MscrmTools\XrmToolBox\Plugins` (creála si no existe).
+2. Copiá ahí, desde `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`:
+   - `AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
+   - `AuditHistoryExtractorPro.XrmToolBox.Core.dll`
+   - `ClosedXML.dll`, `CsvHelper.dll`, `DocumentFormat.OpenXml.dll`, `ExcelNumberFormat.dll`,
+     `SixLabors.Fonts.dll`, `XLParser.dll`, `Irony.dll`, `System.IO.Packaging.dll` — son las
+     dependencias de terceros que necesita la exportación a Excel/CSV y que el host **no**
+     trae de fábrica. No copiar el resto de las DLLs de esa carpeta (SDK de Dataverse,
+     `XrmToolBox.exe`, `McTools.Xrm.Connection*`, etc.) — esas ya están cargadas por el host
+     y copiar una versión distinta puede generar conflictos de assembly loading.
+   - `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png` (el ícono).
+3. Abrí (o reiniciá) XrmToolBox. El plugin **"Audit History Extractor Pro"** debería aparecer
+   directo en la pantalla principal, sin necesidad de pasar por Tool Library.
+
+### 2b. Alternativa: generar el `.nupkg` (si tu versión sí tiene "Install from disk")
+
+Con `nuget.exe` (viene con Visual Studio, o [descargalo](https://www.nuget.org/downloads) —
+`dotnet` CLI no soporta empaquetar un `.nuspec` suelto directamente):
 
 ```
 nuget pack packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory packaging\output
 ```
 
-Si preferís `dotnet` CLI (no soporta empaquetar un `.nuspec` suelto directamente — hace falta
-un `.csproj` mínimo que lo referencie vía `<NuspecFile>`; es el método que se usó para validar
-el empaquetado en esta sesión, ver `CLAUDE.md`). Más simple: instalar `nuget.exe` y usar el
-comando de arriba.
+El `.nuspec` ya sigue la convención real de XrmToolBox (todo bajo `lib\net462\Plugins\`, sin
+declarar dependencias NuGet). Verificá que el `.nupkg` generado contenga, al menos:
+- `lib\net462\Plugins\AuditHistoryExtractorPro.XrmToolBox.Core.dll`
+- `lib\net462\Plugins\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
+- `lib\net462\Plugins\PluginPackage.png`
+- Los DLLs de `ClosedXML`/`CsvHelper` y su árbol de dependencias listados en el paso 2.
 
-Verificá que el `.nupkg` generado (`packaging\output\AuditHistoryExtractorPro.XrmToolBox.0.1.0.nupkg`)
-contenga, al menos:
-- `lib\net462\AuditHistoryExtractorPro.XrmToolBox.Core.dll`
-- `lib\net462\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
-- `content\PluginPackage.png`
+(podés confirmarlo cambiándole la extensión a `.zip` y abriéndolo, un `.nupkg` es un zip). Si
+tu XrmToolBox tiene la opción, es **Tool Library** → botón de instalar desde archivo (el
+nombre exacto varía entre versiones) → apuntar a este `.nupkg`.
 
-(podés confirmarlo cambiándole la extensión a `.zip` y abriéndolo, un `.nupkg` es un zip).
-
-### 3. Instalar en XrmToolBox
-
-1. Abrí XrmToolBox.
-2. Menú **Tool Library** (ícono de tienda) → pestaña **"My installed tools"** o similar según
-   la versión → botón **"Install from disk"** (o desde el menú principal, buscar la opción
-   equivalente — el nombre exacto varía un poco entre versiones del host).
-3. Apuntá al `.nupkg` generado en el paso 2.
-4. Reiniciá XrmToolBox si te lo pide.
-5. Confirmá que "Audit History Extractor Pro" aparece en la lista de herramientas y que el
-   ícono (lupa sobre círculo azul) se ve correctamente — si no aparece o el ícono sale roto,
-   es la primera señal de que algo del empaquetado (paso 2) está mal.
-
-### 4. Conectar y probar el flujo
+### 3. Conectar y probar el flujo
 
 1. Abrí el plugin contra una conexión a un entorno Dataverse de prueba (¡no producción!).
 2. **Pestaña "Extraer":**
@@ -116,11 +128,12 @@ contenga, al menos:
      detectadas" (o su ausencia) tiene sentido según si el registro cambió después de esa
      auditoría o no.
 
-### 5. Qué reportar si algo falla
+### 4. Qué reportar si algo falla
 
 - Si el plugin no carga o tira excepción al abrir: revisar el log de XrmToolBox
   (`%APPDATA%\MscrmTools\XrmToolBox\Logs` o similar) — probablemente sea un problema de
-  dependencias faltantes (`ClosedXML`/`CsvHelper` no instalados junto al plugin).
+  dependencias faltantes (falta alguno de los DLLs de terceros del paso 2 en la carpeta
+  `Plugins`).
 - Si `OldValues`/`NewValues` salen vacíos: copiar el XML crudo de `changedata` de un registro
   de auditoría real (se puede obtener con `RetrieveAuditDetailsRequest` desde un script rápido,
   o inspeccionando la respuesta cruda) para comparar contra el formato que asume

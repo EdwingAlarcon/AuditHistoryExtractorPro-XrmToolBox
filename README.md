@@ -29,15 +29,31 @@ justificación de cada decisión.
 ## Instalación
 
 Este plugin todavía **no está publicado en el Plugin Store** de XrmToolBox (ver
-[estado del proyecto](docs/README.md#estado-actual)) — hay que instalarlo manualmente:
+[estado del proyecto](docs/README.md#estado-actual)) — hay que instalarlo manualmente. La
+Tool Library de XrmToolBox ya no siempre muestra una opción "Install from disk" visible según
+la versión; el método que funciona en cualquier versión es copiar los DLLs directamente a la
+carpeta `Plugins` del propio XrmToolBox:
 
-1. Compilá el proyecto en `Release` y generá el `.nupkg` (ver
-   [«Cómo probar en una instancia real»](docs/README.md#cómo-probar-en-una-instancia-real)
-   para el paso a paso completo), **o** descargá el `.nupkg` si alguien ya te lo compartió.
-2. Abrí XrmToolBox → **Tool Library** → **Install from disk**.
-3. Apuntá al archivo `.nupkg`.
-4. Reiniciá XrmToolBox si te lo pide.
-5. Buscá **"Audit History Extractor Pro"** en la lista de herramientas.
+1. Compilá el proyecto en `Release` (ver
+   [instalación desde código fuente](#instalación-desde-código-fuente-para-desarrolladores)
+   abajo), o conseguí los DLLs ya compilados.
+2. Copiá estos archivos, todos desde
+   `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`, a
+   `%AppData%\MscrmTools\XrmToolBox\Plugins\` (creá la carpeta `Plugins` si no existe):
+   - `AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
+   - `AuditHistoryExtractorPro.XrmToolBox.Core.dll`
+   - `ClosedXML.dll`, `CsvHelper.dll`, `DocumentFormat.OpenXml.dll`, `ExcelNumberFormat.dll`,
+     `SixLabors.Fonts.dll`, `XLParser.dll`, `Irony.dll`, `System.IO.Packaging.dll`
+     (dependencias de la exportación a Excel/CSV que XrmToolBox no trae de fábrica).
+   - `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png` (el ícono).
+3. Abrí (o reiniciá) XrmToolBox — el plugin **"Audit History Extractor Pro"** debería aparecer
+   directo en la pantalla principal, sin pasar por Tool Library.
+
+Si tu versión de XrmToolBox sí tiene "Install from disk" (Tool Library → botón correspondiente
+según la versión), también podés generar el `.nupkg` (`nuget pack
+packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory packaging\output`) y
+apuntarle ahí — el `.nuspec` ya está armado con la estructura `lib\net462\Plugins\` que exige
+esa convención.
 
 ## Instalación desde código fuente (para desarrolladores)
 
@@ -47,13 +63,8 @@ cd AuditHistoryExtractorPro-XrmToolBox
 dotnet build AuditHistoryExtractorPro.XrmToolBox.sln -c Release
 ```
 
-Con `nuget.exe` (viene con Visual Studio, o [descargalo](https://www.nuget.org/downloads)):
-
-```bash
-nuget pack packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory packaging\output
-```
-
-El `.nupkg` queda en `packaging\output\`, listo para instalar con los pasos de arriba.
+Los DLLs quedan en `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`, listos
+para copiar según el paso 2 de arriba.
 
 ## Estructura del repositorio
 
