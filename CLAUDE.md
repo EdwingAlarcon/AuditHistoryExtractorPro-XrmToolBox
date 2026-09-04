@@ -52,7 +52,7 @@ Resumen:
 - ✅ `ExtraccionView` ahora previsualiza en grilla: "Extraer" llena una `DataGridView` en memoria
   (vía `WorkAsync`/Dataverse) y "Exportar..." (habilitado solo con datos cargados) exporta lo que
   está en la grilla a xlsx/csv/json — la exportación es E/S local, no pasa por `WorkAsync`.
-- ✅ `.nuspec` de empaquetado, `AssemblyInfo.cs` con atributos MEF (`[Export(typeof(IXrmToolBoxPlugin))]`).
+- ✅ `.nuspec` de empaquetado, `AssemblyInfo.cs`.
 - ✅ Referencia al SDK real verificada: el id de paquete correcto es **`XrmToolBoxPackage`**
   (no `XrmToolBox.Extensibility`, que no existe). Fijado en `1.2023.10.67` — la última versión
   que aún publica binarios `net462` (desde `1.2025.7.71`, jul-2025, el paquete pasó a ser
@@ -109,9 +109,30 @@ Resumen:
   (`AssemblyInfo.cs` + `packaging/*.nuspec`), uno menos que antes.
 - ✅ **CI en GitHub Actions** (`.github/workflows/build.yml`): `dotnet build` + `dotnet test` en
   cada push/PR a `master`, en `windows-latest` (necesario por `net462`).
-- ⚠️ Sigue sin probarse contra una instancia real de XrmToolBox/Dataverse (solo se validó que
-  compila, que los tests unitarios de `Core` pasan, y que el `.nupkg` empaqueta correctamente;
-  no hay smoke test end-to-end con el host real). Ver instrucciones de prueba manual abajo.
+- ✅ **BUG CRÍTICO CORREGIDO (2026-09-04, primera prueba real del usuario): el plugin no
+  aparecía en XrmToolBox.** Causa raíz: `[Export(typeof(IXrmToolBoxPlugin))]` estaba puesto
+  directo en `PluginControl` (el `UserControl : PluginControlBase`), que **no implementa**
+  `IXrmToolBoxPlugin` — implementa `IGitHubPlugin`/`IHelpPlugin`, y `PluginControlBase`
+  implementa `IXrmToolBoxPluginControl` (una interfaz *distinta*). El patrón correcto de
+  XrmToolBox (confirmado contra la wiki oficial "Develop your own custom plugin") usa **dos
+  clases separadas**: una clase descriptora chica (`Plugin : PluginBase`, nuevo archivo
+  `Plugin.cs`) que lleva el `[Export]`/`[ExportMetadata]` y solo implementa
+  `GetControl() => new PluginControl()`; el `UserControl` (`PluginControl.cs`) queda sin
+  atributos Export. MEF compone el catálogo por contrato de tipo — al exportar un tipo que no
+  satisface `IXrmToolBoxPlugin`, el host lo descarta **en silencio** (sin excepción, sin log),
+  que es exactamente el síntoma que reportó el usuario (otros plugins cargaban bien, el nuestro
+  no aparecía, logs vacíos). Verificado con una composición MEF real fuera de proceso
+  (`System.ComponentModel.Composition.Hosting.DirectoryCatalog` + `CompositionContainer` sobre
+  `packaging\Plugins\`, con Windows PowerShell clásico por ser .NET Framework real): antes del
+  fix, `GetExports<IXrmToolBoxPlugin>()` devolvía 0; después, devuelve exactamente 1, del tipo
+  `AuditHistoryExtractorPro.XrmToolBox.Plugin.Plugin`, con la metadata correcta. Detectado
+  también que la versión real de XrmToolBox del usuario es `1.2025.10.74` (casi 2 años más
+  nueva que la referencia de compilación `1.2023.10.67`) — no fue la causa (el contrato
+  `IXrmToolBoxPlugin`/`PluginBase` no cambió entre esas versiones, según lo verificado), pero
+  quedó como sospechoso descartado explícitamente, no por omisión.
+- ⚠️ Sigue sin confirmarse con el usuario que el plugin ahora carga en su XrmToolBox real (el
+  fix está verificado por composición MEF fuera de proceso, no por una corrida real del host
+  todavía). Falta también probar el flujo funcional completo (Extraer/Validar) contra Dataverse.
 
 ## Próximos pasos (en orden)
 
@@ -119,11 +140,10 @@ Resumen:
 2. ~~Generar `PluginPackage.png` real~~ — hecho.
 3. ~~CI, cancelación, límite visible, combo de entidades, resumen de cambios en grilla,
    versión centralizada~~ — hecho (ver arriba).
-4. **Probar en una instancia real de XrmToolBox contra un entorno Dataverse de prueba** — ver
-   `docs/README.md#cómo-probar-en-una-instancia-real` para el paso a paso. Es el primer punto
-   pendiente real; nada de lo anterior se validó contra un host XrmToolBox de verdad. Esta vez
-   incluye probar también el combo de entidades (permisos para `RetrieveAllEntitiesRequest`) y
-   la cancelación de una extracción larga.
+4. **Confirmar con el usuario que el plugin ahora aparece en su XrmToolBox real** (recompilar,
+   volver a copiar `packaging\Plugins\` — el fix de MEF cambió `Plugin.dll`) y seguir con
+   `docs/README.md#cómo-probar-en-una-instancia-real` para el resto del flujo funcional
+   (Extraer/Validar contra Dataverse, combo de entidades, cancelación).
 5. Empaquetar y distribuir internamente (ya validado que el `.nupkg` empaqueta correctamente —
    falta el paso 4 antes de considerar esto "distribuible").
 6. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública

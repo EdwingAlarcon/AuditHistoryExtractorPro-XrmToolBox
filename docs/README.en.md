@@ -8,7 +8,9 @@ the single-user interactive host model that XrmToolBox provides.
 ## Current status
 
 Builds end-to-end (`Core`, `Plugin`, `Core.Tests` — 0 errors) and packages correctly.
-**It hasn't been tested against a real XrmToolBox/Dataverse instance yet** — see
+**The bug that kept the plugin from showing up in XrmToolBox is already fixed** (see below),
+but it's still pending confirmation against a real instance that it loads, and that the
+functional flow (Extract/Validate) works — see
 [Testing against a real instance](#testing-against-a-real-instance) below.
 
 - ✅ `AuditChangeDataParser` complete (parses `oldValues`/`newValues` from the `changedata`
@@ -40,6 +42,16 @@ Builds end-to-end (`Core`, `Plugin`, `Core.Tests` — 0 errors) and packages cor
   (previously it had no `<Version>` of its own and defaulted to `1.0.0.0`, out of sync with
   `Plugin.dll`; now fixed, both at `0.1.0.0`).
 - ✅ CI on GitHub Actions (`.github/workflows/build.yml`): build + tests on every push/PR.
+- ✅ **Critical bug fixed: the plugin didn't show up in XrmToolBox.** The
+  `[Export(typeof(IXrmToolBoxPlugin))]` attribute was on `PluginControl` (the `UserControl`),
+  which doesn't implement that interface — it implements `IGitHubPlugin`/`IHelpPlugin`, and
+  inherits `PluginControlBase`, which implements `IXrmToolBoxPluginControl` (a different
+  interface). MEF silently discarded the export, no visible error. The correct pattern uses two
+  classes: a small descriptor (`Plugin.cs`, new file, inherits `PluginBase`) carrying the
+  `[Export]`/`[ExportMetadata]` attributes and only implementing
+  `GetControl() => new PluginControl()`; the `UserControl` keeps no Export attributes. Verified
+  with a real out-of-process MEF composition: before, 0 exports found; after, exactly 1, of the
+  right type.
 
 ## Scope (decided with the user)
 

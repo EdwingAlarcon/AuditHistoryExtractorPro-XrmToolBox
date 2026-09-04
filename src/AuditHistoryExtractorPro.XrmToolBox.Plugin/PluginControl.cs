@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.Composition;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -18,18 +17,12 @@ using XrmToolBox.Extensibility.Interfaces;
 namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
 {
     /// <summary>
-    /// Punto de entrada del plugin para el host de XrmToolBox.
-    /// El host instancia este UserControl (vía MEF, por los atributos Export/ExportMetadata
-    /// abajo) y le entrega la conexión ya autenticada (ConnectionDetail / IOrganizationService)
-    /// — este plugin NO gestiona su propia auth.
+    /// UserControl que el host instancia (vía <see cref="Plugin.GetControl"/>) y al que le
+    /// entrega la conexión ya autenticada (ConnectionDetail / IOrganizationService) — este
+    /// plugin NO gestiona su propia auth. El punto de entrada MEF real es <see cref="Plugin"/>
+    /// (ver Plugin.cs): esta clase NO lleva atributos Export/ExportMetadata — el host la
+    /// descubre a través de <c>Plugin.GetControl()</c>, no por composición MEF directa.
     /// </summary>
-    [Export(typeof(IXrmToolBoxPlugin))]
-    [ExportMetadata("Name", "Audit History Extractor Pro")]
-    [ExportMetadata("Description", "Extrae, exporta y valida historial de auditoría de Dataverse bajo demanda.")]
-    [ExportMetadata("BackgroundColor", "White")]
-    [ExportMetadata("PrimaryFontColor", "Black")]
-    [ExportMetadata("SmallImageBase64", "")]
-    [ExportMetadata("BigImageBase64", "")]
     public partial class PluginControl : PluginControlBase, IGitHubPlugin, IHelpPlugin
     {
         private PluginSettings _settings;
