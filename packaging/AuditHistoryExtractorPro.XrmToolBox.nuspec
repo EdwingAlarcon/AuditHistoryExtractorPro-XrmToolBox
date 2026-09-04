@@ -14,6 +14,7 @@
     <releaseNotes>0.1.0: primera versión interna. Extracción + exportación + validación básica.</releaseNotes>
     <tags>XrmToolBox Dataverse Dynamics365 Auditoria Audit</tags>
     <projectUrl>https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox</projectUrl>
+    <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <dependencies>
       <!--
