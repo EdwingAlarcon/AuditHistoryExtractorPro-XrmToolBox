@@ -7,11 +7,6 @@
 Plugin de [XrmToolBox](https://www.xrmtoolbox.com/) para **extraer, exportar y validar el
 historial de auditoría de Dataverse** bajo demanda, sin necesidad de desplegar una app propia.
 
-Proyecto independiente de [`AuditHistoryExtractorPro`](https://github.com/EdwingAlarcon)
-(la versión Blazor Server + Worker Service on-premise): no comparte código en runtime con esa
-app, es una reimplementación del subconjunto de funcionalidad que tiene sentido en un host
-interactivo de un solo usuario. Ver [`CLAUDE.md`](CLAUDE.md) para el detalle de esa decisión.
-
 ## Funcionalidad
 
 - **Extraer**: filtrar historial de auditoría por entidad, rango de fechas y tipo de operación
@@ -19,9 +14,9 @@ interactivo de un solo usuario. Ver [`CLAUDE.md`](CLAUDE.md) para el detalle de 
 - **Validar**: comparar un registro de auditoría puntual (por `AuditId`) contra el estado
   actual del registro en Dataverse — útil para detectar si un valor auditado sigue vigente.
 
-No incluye reporte de roles de seguridad ni extracción incremental/jobs 24x7 (eso lo sigue
-cubriendo el `Worker` de la app principal); tampoco persiste historial entre sesiones — el
-plugin arranca en blanco cada vez, aunque los archivos exportados sí quedan en tu disco. Ver
+No incluye reporte de roles de seguridad ni extracción incremental/jobs en segundo plano;
+tampoco persiste historial entre sesiones — el plugin arranca en blanco cada vez, aunque los
+archivos exportados sí quedan en tu disco. Ver
 [`docs/README.md`](docs/README.md#alcance-decidido-con-el-usuario) para el detalle y la
 justificación de cada decisión.
 
