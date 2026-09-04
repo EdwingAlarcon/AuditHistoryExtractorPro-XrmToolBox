@@ -108,10 +108,23 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                         }
 
                         var resultado = Service.RetrieveMultiple(query);
-                        foreach (var e in resultado.Entities)
-                            registros.Add(MapearEntidadAuditRecord(e));
+                        var paginaRegistros = resultado.Entities.Select(MapearEntidadAuditRecord).ToList();
 
+                        // El detalle real de cambios (old/new por campo) NO viene completo en el
+                        // "changedata" de un RetrieveMultiple simple contra un entorno real —
+                        // MapearEntidadAuditRecord ya cargó ahí el fallback vía changedata, esto
+                        // lo reemplaza por el detalle correcto cuando Dataverse lo tiene.
+                        worker.ReportProgress(0, $"{registros.Count + paginaRegistros.Count} registros extraídos, trayendo detalle de cambios...");
+                        AuditDetailPopulator.Poblar(Service, paginaRegistros, () => worker.CancellationPending);
+
+                        registros.AddRange(paginaRegistros);
                         worker.ReportProgress(0, $"{registros.Count} registros extraídos...");
+
+                        if (worker.CancellationPending)
+                        {
+                            args.Cancel = true;
+                            return;
+                        }
 
                         if (!resultado.MoreRecords) break;
                         if (!filtros.SinLimite && registros.Count >= filtros.MaxRegistros)

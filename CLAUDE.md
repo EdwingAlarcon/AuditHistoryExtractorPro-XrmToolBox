@@ -217,13 +217,13 @@ Resumen:
      (nuevo enum `AuditOperation`) y `LookupOldValues`/`LookupNewValues` (diccionarios, igual
      forma que `OldValues`/`NewValues`). El *display name* del lookup se obtiene del propio XML
      de `changedata` que ya se leía — Dataverse pone el Id en el atributo `value` del nodo y el
-     nombre legible como texto del nodo (`AuditChangeDataParser` ahora separa ambos). **A
-     propósito NO se migró a `RetrieveAuditDetailsRequest`** (que es lo que realmente usa la app
-     web, con una llamada SDK extra por registro vía batch) — se prefirió no pagar ese costo de
-     performance en una herramienta interactiva on-demand; el trade-off es que el *display name*
-     del lookup solo se captura cuando Dataverse lo incluye en el `changedata` (que es el caso
-     normal, pero no 100% garantizado como si se pidiera explícitamente vía
-     `RetrieveAuditDetailsRequest`). Los exportadores CSV/Excel se reescribieron para aplanar
+     nombre legible como texto del nodo (`AuditChangeDataParser` ahora separa ambos). En esta
+     primera vuelta, a propósito NO se migró a `RetrieveAuditDetailsRequest` (lo que realmente
+     usa la app web) para no pagar el costo de una llamada SDK extra por registro en una
+     herramienta interactiva — **decisión revertida el mismo día, ver bug crítico de abajo: sin
+     ese mensaje, `changedata` viene vacío para la enorme mayoría de los eventos en un entorno
+     real, así que el aplanado por campo no tenía nada que aplanar.** Los exportadores CSV/Excel
+     se reescribieron para aplanar
      cada `AuditRecord` a una fila por campo cambiado (`AuditExportRowFlattener`, compartido por
      ambos, con fallback a una fila con columnas de campo vacías para eventos sin cambios de
      campo — Create/Delete/Access). El export JSON no se tocó: como no es tabular, sigue
@@ -241,6 +241,32 @@ Resumen:
      `PluginControl.EjecutarExtraccion` ahora lo detecta (`seCortoPorLimite`, distinto de
      "se acabaron las páginas") y muestra una advertencia explícita en vez de terminar en
      silencio.
+
+- ✅ **BUG CRÍTICO CORREGIDO (2026-09-04, mismo día, primera extracción real del usuario contra
+  un entorno con volumen): `changedata` viene vacío en la práctica — el export "aplanado" nunca
+  tenía nada que aplanar.** El usuario extrajo enero–marzo 2026 de una entidad con volumen real:
+  63.713 eventos, pero **todas** las filas de export tenían las columnas `Campo`/`ValorAnterior`/
+  `ValorNuevo`/etc. vacías (el fallback de "evento sin cambios" de `AuditExportRowFlattener`
+  disparándose siempre) — y el CSV de la app web para el mismo universo tenía 388.489 filas
+  (≈6× más, consistente con ~6 campos cambiados en promedio por evento SÍ aplanado
+  correctamente). Causa: un `RetrieveMultiple` simple contra la entidad `audit` con `changedata`
+  en el `ColumnSet` **no garantiza traer el detalle real de cambios** contra un entorno real de
+  producción (a diferencia de contra los datos de prueba usados para los tests unitarios, donde
+  siempre "funcionaba"). El mensaje correcto — y el que la app web ya usa en producción — es
+  `RetrieveAuditDetailsRequest` (`Microsoft.Crm.Sdk.Messages`), que devuelve un `AuditDetail`
+  (en el caso normal, un `AttributeAuditDetail` con `OldValue`/`NewValue` como `Entity`
+  completas, incluidas `FormattedValues` y el `Name` real de los lookups). **Fix**: nuevo
+  `AuditDetailPopulator` (`Core/Queries/`) que, por cada página de 5000 registros leída,
+  pide el detalle real vía `ExecuteMultipleRequest` en lotes de 500 (mismo tamaño de lote que
+  usa la app web) y reemplaza `OldValues`/`NewValues`/`LookupOldValues`/`LookupNewValues` cuando
+  el mensaje devuelve algo — si el lote entero falla o un `AuditId` puntual falla, ese registro
+  se queda con el fallback de `changedata` que ya traía desde `MapearEntidadAuditRecord` (no se
+  pierde el registro, solo puede quedar sin detalle de campos). Costo: una llamada SDK adicional
+  por cada 500 registros (antes solo se pagaba el `RetrieveMultiple` de la página) — el trade-off
+  de performance que se había evitado a propósito en el punto anterior resultó no ser opcional:
+  sin este mensaje, el dato de campos cambiados directamente no existe. Pendiente de confirmar
+  con el usuario que, tras el fix, el conteo de filas aplanadas se acerca al de la app web para
+  el mismo universo.
 
 ## Próximos pasos (en orden)
 
