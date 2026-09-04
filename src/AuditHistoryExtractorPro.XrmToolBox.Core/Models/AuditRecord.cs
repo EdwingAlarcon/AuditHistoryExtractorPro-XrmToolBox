@@ -40,6 +40,17 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Models
         public IDictionary<string, string> LookupNewValues { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
+        /// true SOLO cuando <c>RetrieveAuditDetailsRequest</c> falló para este registro (batch
+        /// completo o el registro puntual) y no se pudo confirmar su detalle real de cambios —
+        /// distingue "no se pudo verificar" de "no tuvo cambios de campo" (evento con
+        /// <c>OldValues</c>/<c>NewValues</c> vacíos porque genuinamente no hay nada que
+        /// registrar, ej. Create sin más detalle, Access). Ver <c>Queries.AuditDetailPopulator</c>.
+        /// Un registro con este flag en true puede haber quedado con el fallback (más débil) de
+        /// <c>changedata</c>, o directamente sin ningún dato de campos.
+        /// </summary>
+        public bool DetalleIncompleto { get; set; }
+
+        /// <summary>
         /// Resumen legible de los campos que cambiaron ("campo: antes → después"), calculado
         /// comparando NewValues contra OldValues. Pensado para mostrarse en grilla sin exponer
         /// los diccionarios crudos.

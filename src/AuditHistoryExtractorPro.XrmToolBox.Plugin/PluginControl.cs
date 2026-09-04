@@ -45,6 +45,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
             _extraccionView = new ExtraccionView { Dock = DockStyle.Fill };
             _extraccionView.SolicitarExtraccion += filtros => EjecutarExtraccion(filtros);
             _extraccionView.SolicitarEntidades += EjecutarCargaEntidades;
+            _extraccionView.SolicitarCancelacion += CancelWorker;
 
             _validarView = new ValidarView { Dock = DockStyle.Fill };
             _validarView.SolicitarValidacion += (entidad, auditId) => EjecutarValidacion(entidad, auditId);
@@ -160,6 +161,18 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                             "disponibles para estos filtros — el resultado NO está completo. Tildá \"Sin límite\" o " +
                             "acotá el rango de fechas para traerlos todos.",
                             "Resultado incompleto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+
+                    var conDetalleIncompleto = registros.Count(r => r.DetalleIncompleto);
+                    if (conDetalleIncompleto > 0)
+                    {
+                        MessageBox.Show(this,
+                            $"{conDetalleIncompleto:N0} de {registros.Count:N0} registros no se pudieron verificar " +
+                            "contra Dataverse (falló RetrieveAuditDetails) — quedaron marcados con " +
+                            "DetalleIncompleto = Sí en el export. Puede que a esos registros les falte el detalle de " +
+                            "campos cambiados, aunque el evento en sí sí se extrajo. Revisalos puntualmente por " +
+                            "AuditId si necesitás certeza total, o reintentá la extracción.",
+                            "Detalle incompleto en algunos registros", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
 
                     _extraccionView.MostrarResultados(registros);

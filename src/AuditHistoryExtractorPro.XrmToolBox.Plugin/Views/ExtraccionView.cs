@@ -24,6 +24,14 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
         /// <summary>Pedido de cargar el combo de entidades desde metadata. PluginControl llama a CargarEntidades.</summary>
         public event Action SolicitarEntidades;
 
+        /// <summary>
+        /// Pedido de cancelar la extracción en curso. El host de XrmToolBox NUNCA dibuja un
+        /// botón Cancelar propio pese a `WorkAsyncInfo.IsCancelable = true` — el cartel de
+        /// progreso (`InformationPanel`) es solo una etiqueta con un GIF, sin botón (verificado
+        /// decompilando XrmToolBoxPackage 1.2025.10.74). El botón tiene que ser nuestro.
+        /// </summary>
+        public event Action SolicitarCancelacion;
+
         private static readonly IReadOnlyDictionary<string, IAuditExportService> Exportadores =
             new Dictionary<string, IAuditExportService>
             {
@@ -41,6 +49,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
         private NumericUpDown nudMaxRegistros;
         private ComboBox cboFormato;
         private Button btnExtraer;
+        private Button btnCancelar;
         private Button btnExportar;
         private DataGridView grid;
 
@@ -88,9 +97,14 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             panelMax.Controls.Add(nudMaxRegistros);
             layout.Controls.Add(panelMax, 1, 4);
 
-            btnExtraer = new Button { Text = "Extraer", AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
+            var panelAcciones = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
+            btnExtraer = new Button { Text = "Extraer", AutoSize = true };
             btnExtraer.Click += BtnExtraer_Click;
-            layout.Controls.Add(btnExtraer, 1, 5);
+            btnCancelar = new Button { Text = "Cancelar", AutoSize = true, Enabled = false, Margin = new Padding(8, 0, 0, 0) };
+            btnCancelar.Click += (s, e) => SolicitarCancelacion?.Invoke();
+            panelAcciones.Controls.Add(btnExtraer);
+            panelAcciones.Controls.Add(btnCancelar);
+            layout.Controls.Add(panelAcciones, 1, 5);
 
             var panelExportar = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(4) };
 
@@ -161,6 +175,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             };
 
             btnExtraer.Enabled = false;
+            btnCancelar.Enabled = true;
             SolicitarExtraccion?.Invoke(filtros);
         }
 
@@ -168,6 +183,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
         public void MostrarResultados(List<AuditRecord> registros)
         {
             btnExtraer.Enabled = true;
+            btnCancelar.Enabled = false;
 
             _resultados = registros ?? new List<AuditRecord>();
 

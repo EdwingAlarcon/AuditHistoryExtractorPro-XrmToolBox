@@ -268,6 +268,43 @@ Resumen:
   con el usuario que, tras el fix, el conteo de filas aplanadas se acerca al de la app web para
   el mismo universo.
 
+- ✅ **Flag de integridad `AuditRecord.DetalleIncompleto`** (2026-09-04, a pedido explícito del
+  usuario: "que no se tenga duda de que lo que están descargando es real y verídico"). Antes, si
+  `RetrieveAuditDetailsRequest` fallaba para un registro puntual o para un lote entero (batch de
+  `ExecuteMultipleRequest`), ese registro caía al fallback de `changedata` **en silencio** — sin
+  forma de distinguir "genuinamente no tuvo cambios de campo" de "no se pudo verificar". Se
+  agregó `DetalleIncompleto` (bool, default `false`) a `AuditRecord`, seteado en `true` por
+  `AuditDetailPopulator` únicamente cuando la llamada SDK falló (fault de `ExecuteMultiple` para
+  ese `AuditId`, o excepción en el batch completo) — nunca por "el evento no tenía cambios",
+  que es un resultado legítimo. Se agregó como columna al export (`AuditExportRowFlattener`,
+  penúltima antes de las columnas de campo) y `PluginControl.EjecutarExtraccion` cuenta cuántos
+  registros terminaron con el flag en `true` y muestra una advertencia explícita al final si hay
+  alguno, con el conteo. **Nota:** eventos de tipo `RelationshipAuditDetail`/`ShareAuditDetail`/
+  `RolePrivilegeAuditDetail` (Associate/Disassociate, Share, cambios de rol) devuelven un
+  `AuditDetail` que NO es `AttributeAuditDetail` — hoy `AuditDetailPopulator.AplicarDetalle` los
+  ignora (no son un fallo, simplemente no se parsean sus datos específicos) y por lo tanto NO se
+  marcan como `DetalleIncompleto` — quedan con columnas de campo vacías como si no hubiera
+  cambios, lo cual es engañoso para esos tipos de evento puntuales. Pendiente si se necesita
+  soporte real para esos tres tipos (la app web sí los soporta, ver
+  `DataverseAuditRepository.ApplyAuditDetail` en el repo hermano).
+
+- ✅ **Botón "Cancelar" restaurado en `ExtraccionView`** (2026-09-04, el usuario preguntó "no lo
+  veo en ningún lado" tras notar que la extracción con `RetrieveAuditDetailsRequest` es mucho más
+  lenta). La decisión de sacarlo (ver más arriba, "Cancelación real en Extraer") partía de un
+  supuesto incorrecto: que el host dibuja su propio botón Cancelar cuando
+  `WorkAsyncInfo.IsCancelable = true`. **Falso** — decompilado `XrmToolBoxPackage 1.2025.10.74`
+  con `ilspycmd` (`dotnet tool install -g ilspycmd`) para confirmarlo:
+  `PluginControlBase.WorkAsync` delega en `Worker.WorkAsync`, que arma el cartel de progreso
+  vía `InformationPanel.GetInformationPanel(host, message, width, height)` — un `Panel` con un
+  `Label` y un GIF girando, **sin ningún botón**; `IsCancelable` solo se usa para
+  `BackgroundWorker.WorkerSupportsCancellation`, que habilita `PluginControlBase.CancelWorker()`
+  a nivel de código pero no expone ninguna UI para dispararlo. El cartel además es chico y
+  centrado (340×150 default) — no tapa toda la pantalla, así que un botón propio en otra parte
+  del control no queda tapado. Se agregó `btnCancelar` en `ExtraccionView` (al lado de
+  "Extraer", deshabilitado salvo mientras hay una extracción en curso), evento
+  `SolicitarCancelacion` conectado en `PluginControl` directo al `CancelWorker()` heredado de
+  `PluginControlBase`.
+
 ## Próximos pasos (en orden)
 
 1. ~~Previsualización en grilla en `ExtraccionView`~~ — hecho.

@@ -15,7 +15,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Export
         public static readonly string[] Encabezados =
         {
             "AuditId", "Fecha", "Entidad", "RegistroId", "RegistroNombre",
-            "Accion", "OperacionId", "Operacion", "Usuario",
+            "Accion", "OperacionId", "Operacion", "Usuario", "DetalleIncompleto",
             "Campo", "ValorAnterior", "ValorNuevo", "ValorAnteriorLookup", "ValorNuevoLookup"
         };
 
@@ -37,7 +37,8 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Export
                 r.Action.ToString(),
                 ((int)r.Operation).ToString(),
                 r.Operation.ToString(),
-                r.UserFullName
+                r.UserFullName,
+                r.DetalleIncompleto ? "Sí" : "No"
             };
 
             var campos = r.NewValues?.Keys

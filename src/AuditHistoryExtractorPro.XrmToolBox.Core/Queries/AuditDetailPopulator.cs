@@ -64,13 +64,22 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Queries
                 {
                     // Si el batch entero falla (throttling severo, mensaje no soportado en este
                     // entorno, etc.), cada registro del lote se queda con el fallback de
-                    // changedata que ya trae desde el mapeo inicial.
+                    // changedata que ya trae desde el mapeo inicial — pero se marca como
+                    // DetalleIncompleto: no hay forma de confirmar si ese fallback capturó todo,
+                    // nada, o algo a medias, y el usuario necesita poder distinguir "no cambió"
+                    // de "no se pudo verificar".
+                    foreach (var registro in lote)
+                        registro.DetalleIncompleto = true;
                     continue;
                 }
 
                 foreach (var item in response.Responses)
                 {
-                    if (item.Fault != null) continue; // se queda con el fallback de changedata
+                    if (item.Fault != null)
+                    {
+                        lote[item.RequestIndex].DetalleIncompleto = true;
+                        continue; // se queda con el fallback de changedata
+                    }
 
                     var detalle = (item.Response as RetrieveAuditDetailsResponse)?.AuditDetail;
                     AplicarDetalle(lote[item.RequestIndex], detalle);

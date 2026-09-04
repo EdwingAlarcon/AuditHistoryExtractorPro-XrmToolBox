@@ -69,5 +69,23 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Tests
             fila[lookupAnteriorIndex].Should().Be("Juan Pérez");
             fila[lookupNuevoIndex].Should().Be("María Gómez");
         }
+
+        [Fact]
+        public void Aplanar_DetalleIncompleto_SeReflejaEnTodasLasFilasDelEvento()
+        {
+            var registro = new AuditRecord
+            {
+                AuditId = Guid.NewGuid(),
+                EntityLogicalName = "account",
+                DetalleIncompleto = true,
+                OldValues = new Dictionary<string, string> { ["name"] = "A" },
+                NewValues = new Dictionary<string, string> { ["name"] = "B", ["revenue"] = "1" }
+            };
+
+            var filas = AuditExportRowFlattener.Aplanar(registro).ToList();
+
+            var index = Array.IndexOf(AuditExportRowFlattener.Encabezados, "DetalleIncompleto");
+            filas.Should().OnlyContain(f => f[index] == "Sí");
+        }
     }
 }
