@@ -326,13 +326,26 @@ Resumen:
    versión centralizada~~ — hecho (ver arriba).
 4. ~~Confirmar con el usuario que el plugin ahora aparece en su XrmToolBox real~~ — hecho y
    verificado visualmente (ver bugs #3 y #4 arriba).
-5. **Probar el flujo funcional completo contra Dataverse** — seguir con
-   `docs/README.md#cómo-probar-en-una-instancia-real`: "Extraer" (combo de entidades, filtros,
-   grilla, `ResumenCambios` contra el XML `changedata` real, cancelación, `MaxRegistros`,
-   exportar a xlsx/csv/json) y "Validar" (buscar por `AuditId`, comparar contra Dataverse).
-6. Empaquetar y distribuir internamente (el `.nupkg` empaqueta correctamente; falta el paso 5
+5. **PENDIENTE AHORA MISMO (2026-09-04): confirmar el resultado de la extracción real que el
+   usuario acaba de correr** (enero–marzo 2026, entidad con volumen, ya con el fix de
+   `RetrieveAuditDetailsRequest` desplegado — commit `89877d9` en adelante). Falta que el usuario
+   confirme:
+   - Si el conteo de filas del CSV exportado ahora se acerca a las 388.489 filas de la app web
+     para el mismo universo (antes de este fix daba 63.713, sin fila por campo cambiado).
+   - Si las columnas `Campo`/`ValorAnterior`/`ValorNuevo`/`ValorAnteriorLookup`/`ValorNuevoLookup`
+     salieron pobladas (antes salían vacías).
+   - Si hubo registros marcados `DetalleIncompleto = Sí` (agregado en `52c3f00`, más nuevo que
+     la corrida que el usuario ya hizo — puede que ni siquiera esté en el build que él probó).
+   El build más reciente (`1cb8af3`, botón Cancelar + progreso con tiempo transcurrido/restante)
+   ya está compilado y copiado a `%AppData%\MscrmTools\XrmToolBox\Plugins` — falta que el usuario
+   lo pruebe en una corrida nueva.
+6. Probar el resto del flujo funcional contra Dataverse — seguir con
+   `docs/README.md#cómo-probar-en-una-instancia-real`: combo de entidades, filtros de fecha,
+   grilla, exportar a xlsx/csv/json, y "Validar" (buscar por `AuditId`, comparar contra
+   Dataverse) — esta pantalla todavía no se probó contra un entorno real en esta sesión.
+7. Empaquetar y distribuir internamente (el `.nupkg` empaqueta correctamente; falta el paso 5
    antes de considerar esto "distribuible").
-7. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
+8. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
    del Plugin Store.
 
 ## Convenciones
