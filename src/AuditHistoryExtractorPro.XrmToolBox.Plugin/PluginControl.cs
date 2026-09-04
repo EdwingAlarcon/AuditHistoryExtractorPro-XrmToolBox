@@ -36,6 +36,27 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
         public PluginControl()
         {
             InitializeComponent();
+
+            // Las vistas se crean acá y no en el evento Load: el host llama a UpdateConnection
+            // apenas instancia el control (antes de que se dispare Load, que solo ocurre cuando
+            // el control ya tiene handle de ventana) — con las vistas creadas recién en Load,
+            // UpdateConnection las encontraba en null y tiraba NullReferenceException al abrir
+            // la herramienta ("Referencia a objeto no establecida como instancia de un objeto").
+            _extraccionView = new ExtraccionView { Dock = DockStyle.Fill };
+            _extraccionView.SolicitarExtraccion += filtros => EjecutarExtraccion(filtros);
+            _extraccionView.SolicitarEntidades += EjecutarCargaEntidades;
+
+            _validarView = new ValidarView { Dock = DockStyle.Fill };
+            _validarView.SolicitarValidacion += (entidad, auditId) => EjecutarValidacion(entidad, auditId);
+
+            var tabExtraer = new TabPage("Extraer") { Padding = new Padding(8) };
+            tabExtraer.Controls.Add(_extraccionView);
+
+            var tabValidar = new TabPage("Validar") { Padding = new Padding(8) };
+            tabValidar.Controls.Add(_validarView);
+
+            tabPrincipal.TabPages.Add(tabExtraer);
+            tabPrincipal.TabPages.Add(tabValidar);
         }
 
         public override void UpdateConnection(IOrganizationService newService, ConnectionDetail detail, string actionName, object parameter)
@@ -52,22 +73,6 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
             {
                 _settings = new PluginSettings();
             }
-
-            _extraccionView = new ExtraccionView { Dock = DockStyle.Fill };
-            _extraccionView.SolicitarExtraccion += filtros => EjecutarExtraccion(filtros);
-            _extraccionView.SolicitarEntidades += EjecutarCargaEntidades;
-
-            _validarView = new ValidarView { Dock = DockStyle.Fill };
-            _validarView.SolicitarValidacion += (entidad, auditId) => EjecutarValidacion(entidad, auditId);
-
-            var tabExtraer = new TabPage("Extraer") { Padding = new Padding(8) };
-            tabExtraer.Controls.Add(_extraccionView);
-
-            var tabValidar = new TabPage("Validar") { Padding = new Padding(8) };
-            tabValidar.Controls.Add(_validarView);
-
-            tabPrincipal.TabPages.Add(tabExtraer);
-            tabPrincipal.TabPages.Add(tabValidar);
         }
 
         private void EjecutarExtraccion(AuditQueryFilters filtros)
