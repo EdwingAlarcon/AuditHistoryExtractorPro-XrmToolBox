@@ -36,21 +36,15 @@ justificación de cada decisión.
 Este plugin todavía **no está publicado en el Plugin Store** de XrmToolBox (ver
 [estado del proyecto](docs/README.md#estado-actual)) — hay que instalarlo manualmente. La
 Tool Library de XrmToolBox ya no siempre muestra una opción "Install from disk" visible según
-la versión; el método que funciona en cualquier versión es copiar los DLLs directamente a la
-carpeta `Plugins` del propio XrmToolBox:
+la versión; el método que funciona en cualquier versión es copiar los archivos directamente a
+la carpeta `Plugins` del propio XrmToolBox:
 
 1. Compilá el proyecto en `Release` (ver
    [instalación desde código fuente](#instalación-desde-código-fuente-para-desarrolladores)
-   abajo), o conseguí los DLLs ya compilados.
-2. Copiá estos archivos, todos desde
-   `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`, a
-   `%AppData%\MscrmTools\XrmToolBox\Plugins\` (creá la carpeta `Plugins` si no existe):
-   - `AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
-   - `AuditHistoryExtractorPro.XrmToolBox.Core.dll`
-   - `ClosedXML.dll`, `CsvHelper.dll`, `DocumentFormat.OpenXml.dll`, `ExcelNumberFormat.dll`,
-     `SixLabors.Fonts.dll`, `XLParser.dll`, `Irony.dll`, `System.IO.Packaging.dll`
-     (dependencias de la exportación a Excel/CSV que XrmToolBox no trae de fábrica).
-   - `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png` (el ícono).
+   abajo) — eso deja listos, en `packaging\Plugins\`, los 11 archivos exactos que hacen falta
+   (no hay que rescatarlos entre los ~150 DLLs de `bin\Release\net462\`).
+2. Copiá esos archivos a `%AppData%\MscrmTools\XrmToolBox\Plugins\` (creá la carpeta si no
+   existe) — o corré `powershell -File packaging\install-local.ps1`, que lo hace por vos.
 3. Abrí (o reiniciá) XrmToolBox — el plugin **"Audit History Extractor Pro"** debería aparecer
    directo en la pantalla principal, sin pasar por Tool Library.
 
@@ -68,8 +62,8 @@ cd AuditHistoryExtractorPro-XrmToolBox
 dotnet build AuditHistoryExtractorPro.XrmToolBox.sln -c Release
 ```
 
-Los DLLs quedan en `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`, listos
-para copiar según el paso 2 de arriba.
+Al compilar en `Release`, `packaging\Plugins\` queda listo con los archivos exactos para copiar
+según el paso 2 de arriba.
 
 ## Estructura del repositorio
 
@@ -81,6 +75,8 @@ tests/
   AuditHistoryExtractorPro.XrmToolBox.Core.Tests/
 packaging/
   AuditHistoryExtractorPro.XrmToolBox.nuspec
+  install-local.ps1                             Copia packaging\Plugins\ a tu XrmToolBox real
+  Plugins/                                       (generado al compilar en Release, no versionado)
 ```
 
 ## Estado del proyecto

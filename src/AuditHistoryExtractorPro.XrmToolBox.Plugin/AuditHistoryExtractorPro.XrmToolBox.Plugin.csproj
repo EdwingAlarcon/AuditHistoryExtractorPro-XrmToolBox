@@ -25,4 +25,31 @@
     <None Include="Resources\PluginPackage.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!--
+    Al compilar en Release, junta en packaging/Plugins/ exactamente los archivos que hay que
+    copiar a mano a la carpeta Plugins de una instalación real de XrmToolBox (ver
+    docs/README.md#instalar-en-xrmtoolbox) — así no hay que rescatarlos entre los ~150 DLLs que
+    trae bin/Release/net462 por las dependencias de XrmToolBoxPackage/Microsoft.CrmSdk.
+    Esta lista debe reflejar exactamente lo mismo que packaging/*.nuspec bajo lib\net462\Plugins\
+    — si se agrega/saca una dependencia de terceros en Core, actualizar ambos lugares.
+  -->
+  <ItemGroup>
+    <PluginDeployFile Include="$(TargetDir)AuditHistoryExtractorPro.XrmToolBox.Plugin.dll" />
+    <PluginDeployFile Include="$(TargetDir)AuditHistoryExtractorPro.XrmToolBox.Core.dll" />
+    <PluginDeployFile Include="$(TargetDir)ClosedXML.dll" />
+    <PluginDeployFile Include="$(TargetDir)CsvHelper.dll" />
+    <PluginDeployFile Include="$(TargetDir)DocumentFormat.OpenXml.dll" />
+    <PluginDeployFile Include="$(TargetDir)ExcelNumberFormat.dll" />
+    <PluginDeployFile Include="$(TargetDir)SixLabors.Fonts.dll" />
+    <PluginDeployFile Include="$(TargetDir)XLParser.dll" />
+    <PluginDeployFile Include="$(TargetDir)Irony.dll" />
+    <PluginDeployFile Include="$(TargetDir)System.IO.Packaging.dll" />
+    <PluginDeployFile Include="$(TargetDir)Resources\PluginPackage.png" />
+  </ItemGroup>
+
+  <Target Name="CollectPluginDeployFiles" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)..\..\packaging\Plugins" Condition="!Exists('$(MSBuildThisFileDirectory)..\..\packaging\Plugins')" />
+    <Copy SourceFiles="@(PluginDeployFile)" DestinationFolder="$(MSBuildThisFileDirectory)..\..\packaging\Plugins" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

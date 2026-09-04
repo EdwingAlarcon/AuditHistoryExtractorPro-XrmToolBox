@@ -3,3 +3,5 @@ obj/
 *.user
 .vs/
 *.nupkg
+packaging/Plugins/
+packaging/output/

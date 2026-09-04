@@ -72,12 +72,18 @@ Resumen:
   hay Visual Studio instalado acá) y se confirmó que el `.nupkg` contiene todo bajo
   `lib\net462\Plugins\`. No se versiona (`.gitignore` ya lo excluye) — hay que regenerarlo
   localmente antes de instalar.
-- ✅ Instalación manual documentada: como la Tool Library de XrmToolBox no siempre expone
-  "Install from disk" según la versión del host, se documentó (y es el método principal en
-  `docs/README.md`) copiar los DLLs directo a `%AppData%\MscrmTools\XrmToolBox\Plugins\` — el
-  propio proyecto (`Plugin.dll`, `Core.dll`), los 8 DLLs de terceros de arriba, y el ícono. No
-  copiar ensamblados del SDK/host (`Microsoft.Xrm.Sdk.dll`, `XrmToolBox.Extensibility.dll`,
-  etc.) — esos ya están cargados por el host y duplicarlos puede romper el assembly loading.
+- ✅ Instalación manual documentada y automatizada: como la Tool Library de XrmToolBox no
+  siempre expone "Install from disk" según la versión del host, se documentó (y es el método
+  principal en `docs/README.md`) copiar los archivos directo a
+  `%AppData%\MscrmTools\XrmToolBox\Plugins\`. Para no tener que rescatarlos entre los ~150 DLLs
+  de `bin\Release\net462\` (todo lo que trae `XrmToolBoxPackage`/`Microsoft.CrmSdk`, que no hay
+  que tocar), `Plugin.csproj` tiene un `Target AfterTargets="Build"` (solo en `Configuration ==
+  Release`) que junta los 11 archivos exactos en `packaging\Plugins\` — mismo contenido que
+  `lib\net462\Plugins\` en el `.nuspec`, hay que mantener ambas listas sincronizadas si cambian
+  las dependencias de terceros de `Core`. `packaging\install-local.ps1` copia esa carpeta directo
+  a la instalación real de XrmToolBox (autodetecta `%AppData%\...\Plugins`, o se le puede pasar
+  `-XrmToolBoxPluginsPath`). Ninguna de las dos carpetas (`packaging\Plugins\`, `packaging\output\`)
+  se versiona.
 - ✅ **Bug real corregido antes de probarse**: `AuditQueryBuilder` seteaba `TopCount` en la
   `QueryExpression` Y `PluginControl.EjecutarExtraccion` seteaba `PageInfo` — Dataverse no
   permite combinar ambos en la misma consulta (falla en runtime). Se sacó `TopCount`; el límite

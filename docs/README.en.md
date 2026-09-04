@@ -75,27 +75,27 @@ dotnet build AuditHistoryExtractorPro.XrmToolBox.sln -c Release
 
 (or from Visual Studio 2022: open the `.sln`, select the `Release` configuration, `Build Solution`).
 
-### 2. Install into XrmToolBox: copy the DLLs into the `Plugins` folder
+### 2. Install into XrmToolBox: copy the files into the `Plugins` folder
 
 XrmToolBox's Tool Library doesn't always expose a visible "Install from disk" button (varies by
 host version) — the method that works on any version, and is also what XrmToolBox's own
 development guide recommends for local debugging, is copying the assemblies directly into the
-host's `Plugins` folder:
+host's `Plugins` folder.
 
-1. Locate your XrmToolBox installation's `Plugins` folder — usually
-   `%AppData%\MscrmTools\XrmToolBox\Plugins` (create it if it doesn't exist).
-2. Copy there, from `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\`:
-   - `AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
-   - `AuditHistoryExtractorPro.XrmToolBox.Core.dll`
-   - `ClosedXML.dll`, `CsvHelper.dll`, `DocumentFormat.OpenXml.dll`, `ExcelNumberFormat.dll`,
-     `SixLabors.Fonts.dll`, `XLParser.dll`, `Irony.dll`, `System.IO.Packaging.dll` — these are
-     the third-party dependencies the Excel/CSV export needs and that the host does **not**
-     ship out of the box. Don't copy the rest of the DLLs in that folder (Dataverse SDK,
-     `XrmToolBox.exe`, `McTools.Xrm.Connection*`, etc.) — those are already loaded by the host,
-     and copying a different version can cause assembly-loading conflicts.
-   - `src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png` (the icon).
-3. Open (or restart) XrmToolBox. The **"Audit History Extractor Pro"** plugin should show up
-   directly on the home screen, no need to go through Tool Library.
+Building in Release (step 1) already leaves the exact 11 files you need ready in
+**`packaging\Plugins\`** — no need to fish them out of the ~150 DLLs in
+`bin\Release\net462\` (which also holds everything XrmToolBox itself already ships, that you
+must NOT touch). Two ways to install from there:
+
+- **Automatic:** `powershell -File packaging\install-local.ps1` — copies everything in
+  `packaging\Plugins\` into `%AppData%\MscrmTools\XrmToolBox\Plugins` (creating the folder if
+  it doesn't exist). If your XrmToolBox install doesn't use the default path, pass
+  `-XrmToolBoxPluginsPath "C:\path\to\your\Plugins"`.
+- **Manual:** copy the full contents of `packaging\Plugins\` into
+  `%AppData%\MscrmTools\XrmToolBox\Plugins` (create it if it doesn't exist).
+
+Then open (or restart) XrmToolBox. The **"Audit History Extractor Pro"** plugin should show up
+directly on the home screen, no need to go through Tool Library.
 
 ### 2b. Alternative: generate the `.nupkg` (if your version does have "Install from disk")
 
@@ -188,6 +188,8 @@ tests/
   AuditHistoryExtractorPro.XrmToolBox.Core.Tests/
 packaging/
   AuditHistoryExtractorPro.XrmToolBox.nuspec
+  install-local.ps1                             Copies packaging\Plugins\ into your real XrmToolBox
+  Plugins/                                       (generated on Release build, not source-controlled)
 Directory.Build.props                            Version shared by Core and Plugin
 ```
 
