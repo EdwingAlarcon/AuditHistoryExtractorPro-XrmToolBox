@@ -21,6 +21,9 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
         /// <summary>Filtros elegidos por el usuario. PluginControl ejecuta la consulta y llama a MostrarResultados.</summary>
         public event Action<AuditQueryFilters> SolicitarExtraccion;
 
+        /// <summary>Pedido de cargar el combo de entidades desde metadata. PluginControl llama a CargarEntidades.</summary>
+        public event Action SolicitarEntidades;
+
         private static readonly IReadOnlyDictionary<string, IAuditExportService> Exportadores =
             new Dictionary<string, IAuditExportService>
             {
@@ -29,15 +32,18 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
                 ["json"] = new JsonAuditExportService()
             };
 
-        private TextBox txtEntidad;
+        private ComboBox cboEntidad;
+        private Button btnCargarEntidades;
         private DateTimePicker dtDesde;
         private DateTimePicker dtHasta;
         private CheckedListBox clbOperaciones;
+        private NumericUpDown nudMaxRegistros;
         private ComboBox cboFormato;
         private Button btnExtraer;
         private Button btnExportar;
         private DataGridView grid;
 
+        private List<EntidadAuditable> _entidadesDisponibles = new List<EntidadAuditable>();
         private List<AuditRecord> _resultados = new List<AuditRecord>();
 
         public ExtraccionView()
@@ -47,11 +53,14 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
 
         private void ConstruirUI()
         {
-            var layout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true, Padding = new Padding(4) };
+            var layout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 3, AutoSize = true, Padding = new Padding(4) };
 
             layout.Controls.Add(new System.Windows.Forms.Label { Text = "Entidad (nombre lógico):", AutoSize = true }, 0, 0);
-            txtEntidad = new TextBox { Width = 200 };
-            layout.Controls.Add(txtEntidad, 1, 0);
+            cboEntidad = new ComboBox { Width = 260, DropDownStyle = ComboBoxStyle.DropDown, AutoCompleteMode = AutoCompleteMode.SuggestAppend, AutoCompleteSource = AutoCompleteSource.ListItems };
+            layout.Controls.Add(cboEntidad, 1, 0);
+            btnCargarEntidades = new Button { Text = "Cargar entidades...", AutoSize = true };
+            btnCargarEntidades.Click += BtnCargarEntidades_Click;
+            layout.Controls.Add(btnCargarEntidades, 2, 0);
 
             layout.Controls.Add(new System.Windows.Forms.Label { Text = "Desde:", AutoSize = true }, 0, 1);
             dtDesde = new DateTimePicker { Width = 200, Value = DateTime.Today.AddMonths(-1) };
@@ -69,9 +78,13 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             });
             layout.Controls.Add(clbOperaciones, 1, 3);
 
+            layout.Controls.Add(new System.Windows.Forms.Label { Text = "Máximo de registros:", AutoSize = true }, 0, 4);
+            nudMaxRegistros = new NumericUpDown { Width = 100, Minimum = 100, Maximum = 500_000, Increment = 1000, Value = 50_000, ThousandsSeparator = true };
+            layout.Controls.Add(nudMaxRegistros, 1, 4);
+
             btnExtraer = new Button { Text = "Extraer", AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
             btnExtraer.Click += BtnExtraer_Click;
-            layout.Controls.Add(btnExtraer, 1, 4);
+            layout.Controls.Add(btnExtraer, 1, 5);
 
             var panelExportar = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(4) };
 
@@ -98,9 +111,33 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             Controls.Add(layout);
         }
 
+        private void BtnCargarEntidades_Click(object sender, EventArgs e) => SolicitarEntidades?.Invoke();
+
+        /// <summary>Llenar el combo de entidades con auditoría habilitada. Llamado por PluginControl tras WorkAsync.</summary>
+        public void CargarEntidades(List<EntidadAuditable> entidades)
+        {
+            _entidadesDisponibles = entidades ?? new List<EntidadAuditable>();
+
+            var textoActual = cboEntidad.Text;
+            cboEntidad.Items.Clear();
+            cboEntidad.Items.AddRange(_entidadesDisponibles.Cast<object>().ToArray());
+            cboEntidad.AutoCompleteCustomSource.Clear();
+            cboEntidad.AutoCompleteCustomSource.AddRange(_entidadesDisponibles.Select(x => x.ToString()).ToArray());
+            cboEntidad.Text = textoActual;
+        }
+
+        private string ObtenerEntidadSeleccionada()
+        {
+            var texto = cboEntidad.Text?.Trim() ?? string.Empty;
+            var coincidencia = _entidadesDisponibles.FirstOrDefault(x =>
+                string.Equals(x.ToString(), texto, StringComparison.OrdinalIgnoreCase));
+            return coincidencia?.LogicalName ?? texto;
+        }
+
         private void BtnExtraer_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtEntidad.Text))
+            var entidad = ObtenerEntidadSeleccionada();
+            if (string.IsNullOrWhiteSpace(entidad))
             {
                 MessageBox.Show(this, "Indique el nombre lógico de la entidad.", "Falta información",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -109,18 +146,22 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
 
             var filtros = new AuditQueryFilters
             {
-                EntityLogicalName = txtEntidad.Text.Trim(),
+                EntityLogicalName = entidad,
                 FechaDesde = dtDesde.Value.Date,
                 FechaHasta = dtHasta.Value.Date,
-                Operaciones = clbOperaciones.CheckedItems.Cast<AuditAction>().ToList()
+                Operaciones = clbOperaciones.CheckedItems.Cast<AuditAction>().ToList(),
+                MaxRegistros = (int)nudMaxRegistros.Value
             };
 
+            btnExtraer.Enabled = false;
             SolicitarExtraccion?.Invoke(filtros);
         }
 
-        /// <summary>Llenar la grilla con los resultados. Llamado por PluginControl tras WorkAsync.</summary>
+        /// <summary>Llenar la grilla con los resultados. Llamado por PluginControl tras WorkAsync (haya sido cancelado o no).</summary>
         public void MostrarResultados(List<AuditRecord> registros)
         {
+            btnExtraer.Enabled = true;
+
             _resultados = registros ?? new List<AuditRecord>();
 
             grid.DataSource = new BindingList<AuditRecord>(_resultados);
@@ -143,7 +184,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             if (_resultados.Count == 0) return;
 
             var formato = cboFormato.SelectedItem.ToString();
-            using (var sfd = new SaveFileDialog { Filter = $"Archivo .{formato}|*.{formato}", FileName = $"auditoria_{txtEntidad.Text.Trim()}.{formato}" })
+            using (var sfd = new SaveFileDialog { Filter = $"Archivo .{formato}|*.{formato}", FileName = $"auditoria_{ObtenerEntidadSeleccionada()}.{formato}" })
             {
                 if (sfd.ShowDialog(this) != DialogResult.OK) return;
 

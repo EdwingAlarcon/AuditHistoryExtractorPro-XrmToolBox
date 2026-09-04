@@ -2,6 +2,7 @@
 
 🌐 **English** | [Español](README.md)
 
+[![Build and Test](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml/badge.svg)](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.6.2-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
 [![XrmToolBox](https://img.shields.io/badge/XrmToolBox-Plugin-0072C6.svg)](https://www.xrmtoolbox.com/)
@@ -14,8 +15,10 @@ audit history** on demand, without deploying a dedicated app.
 
 ## Features
 
-- **Extract**: filter audit history by entity, date range, and operation type
-  (Create/Update/Delete/Access), preview it in a grid, and export to Excel, CSV, or JSON.
+- **Extract**: filter audit history by entity (with autocomplete from real metadata), date
+  range, and operation type (Create/Update/Delete/Access), preview it in a grid (with a
+  readable summary of which fields changed), cancel a long-running extraction, and export to
+  Excel, CSV, or JSON.
 - **Validate**: compare a specific audit record (by `AuditId`) against the current state of
   the record in Dataverse — useful to check whether an audited value is still current.
 

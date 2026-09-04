@@ -13,9 +13,15 @@ Builds end-to-end (`Core`, `Plugin`, `Core.Tests` — 0 errors) and packages cor
 
 - ✅ `AuditChangeDataParser` complete (parses `oldValues`/`newValues` from the `changedata`
   XML on the `audit` entity).
-- ✅ "Extract" (filters → in-memory grid via `WorkAsync`) and "Export..." (grid → xlsx/csv/json,
-  local I/O) split into two buttons in `ExtraccionView`.
+- ✅ "Extract" (filters → in-memory grid via a cancelable `WorkAsync`) and "Export..." (grid →
+  xlsx/csv/json, local I/O) split into two buttons in `ExtraccionView`. The record limit
+  (`MaxRegistros`) is a visible `NumericUpDown` in the UI (previously fixed at 50,000 and
+  hidden), and the entity is picked from an autocomplete combo populated from real metadata
+  (a "Load entities..." button, filtered to only audit-enabled entities) — free text is still
+  accepted if the combo isn't loaded.
 - ✅ "Validate" (spot-check an `AuditId` against the current state in Dataverse) functional.
+- ✅ `AuditRecord.ResumenCambios`: a computed column ("field: before → after") on the "Extract"
+  grid for the most useful case (Update), without exposing the raw dictionaries.
 - ✅ Real SDK reference verified: the correct NuGet package is **`XrmToolBoxPackage`**
   (not `XrmToolBox.Extensibility`, which doesn't exist as an id). Pinned to `1.2023.10.67` —
   the last version that still ships `net462` binaries (as of `1.2025.7.71`, jul-2025, the
@@ -27,6 +33,13 @@ Builds end-to-end (`Core`, `Plugin`, `Core.Tests` — 0 errors) and packages cor
   assemblies the host doesn't ship (`ClosedXML` and its dependency tree, `CsvHelper`).
 - ✅ `PluginPackage.png` is a real 32x32 icon (not a placeholder).
 - ✅ Packaging verified with `nuget.exe pack` against the `.nuspec` (see below how to generate it).
+- ✅ Real bug fixed: `AuditQueryBuilder` was setting `TopCount` on the query, and
+  `PluginControl` was also setting `PageInfo` — Dataverse doesn't allow combining both (fails
+  at runtime). `TopCount` was removed; `MaxRegistros` now caps the client-side paging loop.
+- ✅ Version centralized in `Directory.Build.props` (repo root) — `Core.csproj` inherits it
+  (previously it had no `<Version>` of its own and defaulted to `1.0.0.0`, out of sync with
+  `Plugin.dll`; now fixed, both at `0.1.0.0`).
+- ✅ CI on GitHub Actions (`.github/workflows/build.yml`): build + tests on every push/PR.
 
 ## Scope (decided with the user)
 
@@ -109,16 +122,26 @@ varies by version) → point it to this `.nupkg`.
 
 1. Open the plugin against a connection to a test Dataverse environment (not production!).
 2. **"Extract" tab:**
-   - Enter the logical name of an entity that has auditing enabled and real history (e.g.
-     `account`, `contact`, or a custom entity you know has audited changes).
+   - Click "Load entities..." → confirm the combo fills with real entities (only the ones with
+     auditing enabled) and that autocomplete works while typing. If it fails, check that the
+     connected user has permission for `RetrieveAllEntitiesRequest` (a metadata privilege,
+     normally included in any role with customization access).
+   - Pick an entity with real history (from the combo, or by typing the logical name directly
+     if you'd rather skip loading the combo).
    - Pick a date range that includes known activity.
    - Check at least "Update" under Operations (this is the most important case: it validates
      that `AuditChangeDataParser` is correctly reading your environment's real `changedata` XML
      — if the format your environment returns differs from the one assumed,
      `OldValues`/`NewValues` will come out empty even for real audit records).
-   - Click "Extract" → confirm the grid fills up and the columns look reasonable (date, entity,
-     action, user). If `OldValues`/`NewValues` come out empty on updates you know changed
-     fields, that's the first bug to report.
+   - Click "Extract" → confirm the grid fills up, the `ResumenCambios` column shows something
+     like `field: old value → new value` on updates, and the rest of the columns look reasonable
+     (date, entity, action, user). If `ResumenCambios` comes out empty on updates you know
+     changed fields, that's the first bug to report.
+   - With a high-volume entity, try cancelling the extraction partway through (the "Cancel"
+     button the host itself shows while `WorkAsync` runs) and confirm the grid still fills with
+     the records obtained up to that point.
+   - Lower "Max records" to a small number (e.g. 100) with a high-volume entity and confirm the
+     extraction stops there instead of continuing to page.
    - Click "Export..." → pick a format and a path, confirm the file gets generated and opens
      correctly (Excel/CSV/JSON depending on the format).
 3. **"Validate" tab:**
@@ -156,6 +179,8 @@ varies by version) → point it to this `.nupkg`.
 ## Structure
 
 ```
+.github/workflows/
+  build.yml                                     CI: build + tests on every push/PR
 src/
   AuditHistoryExtractorPro.XrmToolBox.Core/     Pure logic (models, query builder, export, comparison)
   AuditHistoryExtractorPro.XrmToolBox.Plugin/   UserControl + integration with the XrmToolBox host
@@ -163,6 +188,7 @@ tests/
   AuditHistoryExtractorPro.XrmToolBox.Core.Tests/
 packaging/
   AuditHistoryExtractorPro.XrmToolBox.nuspec
+Directory.Build.props                            Version shared by Core and Plugin
 ```
 
 ## Next steps (short roadmap)
@@ -170,8 +196,10 @@ packaging/
 1. ~~`AuditChangeDataParser` (parsing `changedata`)~~ — done.
 2. ~~Result grid in `ExtraccionView`~~ — done.
 3. ~~Real icon~~ — done.
-4. **Manual testing against a real XrmToolBox + test Dataverse instance** — next real step,
+4. ~~CI, cancellation, visible record limit, metadata-backed entity combo, changes-summary
+   grid column, centralized version~~ — done.
+5. **Manual testing against a real XrmToolBox + test Dataverse instance** — next real step,
    see the section above.
-5. Packaging and internal distribution (local `.nupkg`) — the mechanism is already validated,
-   step 4 is needed before considering this ready to hand out.
-6. Collect feedback from 2-3 internal users before evaluating a public release.
+6. Packaging and internal distribution (local `.nupkg`) — the mechanism is already validated,
+   step 5 is needed before considering this ready to hand out.
+7. Collect feedback from 2-3 internal users before evaluating a public release.

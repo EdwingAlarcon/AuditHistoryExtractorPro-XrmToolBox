@@ -13,9 +13,15 @@ correctamente. **Todavía no se probó contra una instancia real de XrmToolBox/D
 
 - ✅ `AuditChangeDataParser` completo (parsea `oldValues`/`newValues` del XML `changedata`
   de la entidad `audit`).
-- ✅ "Extraer" (filtros → grilla en memoria vía `WorkAsync`) y "Exportar..." (grilla → xlsx/csv/json,
-  E/S local) separados en dos botones en `ExtraccionView`.
+- ✅ "Extraer" (filtros → grilla en memoria vía `WorkAsync`, cancelable) y "Exportar..." (grilla
+  → xlsx/csv/json, E/S local) separados en dos botones en `ExtraccionView`. El límite de
+  registros (`MaxRegistros`) es un `NumericUpDown` visible en la UI (antes estaba fijo en 50.000
+  y oculto), y la entidad se elige con autocompletado desde un combo poblado por metadata real
+  (botón "Cargar entidades...", filtra solo entidades con auditoría habilitada) — sigue
+  aceptando texto libre si no se carga el combo.
 - ✅ "Validar" (spot-check de un `AuditId` contra el estado actual en Dataverse) funcional.
+- ✅ `AuditRecord.ResumenCambios`: columna calculada ("campo: antes → después") en la grilla de
+  "Extraer" para el caso más útil (Update), sin exponer los diccionarios crudos.
 - ✅ Referencia al SDK real verificada: el paquete NuGet correcto es **`XrmToolBoxPackage`**
   (no `XrmToolBox.Extensibility`, que no existe como id). Se fijó en `1.2023.10.67` — la
   última versión que todavía publica binarios `net462` (desde `1.2025.7.71`, jul-2025, el
@@ -28,6 +34,13 @@ correctamente. **Todavía no se probó contra una instancia real de XrmToolBox/D
   `CsvHelper`).
 - ✅ `PluginPackage.png` es un ícono real de 32x32 (no un placeholder).
 - ✅ Empaquetado verificado con `nuget.exe pack` sobre el `.nuspec` (ver más abajo cómo generarlo).
+- ✅ Bug real corregido: `AuditQueryBuilder` seteaba `TopCount` en la consulta y
+  `PluginControl` también seteaba `PageInfo` — Dataverse no permite combinar ambos (falla en
+  runtime). Se sacó `TopCount`; `MaxRegistros` corta la paginación del lado del cliente.
+- ✅ Versión centralizada en `Directory.Build.props` (raíz del repo) — `Core.csproj` la hereda
+  (antes no tenía `<Version>` propia y quedaba en `1.0.0.0` por default, desincronizada de
+  `Plugin.dll`; ya corregido, ambas en `0.1.0.0`).
+- ✅ CI en GitHub Actions (`.github/workflows/build.yml`): build + tests en cada push/PR.
 
 ## Alcance (decidido con el usuario)
 
@@ -110,16 +123,26 @@ nombre exacto varía entre versiones) → apuntar a este `.nupkg`.
 
 1. Abrí el plugin contra una conexión a un entorno Dataverse de prueba (¡no producción!).
 2. **Pestaña "Extraer":**
-   - Ingresá un nombre lógico de entidad que tenga auditoría habilitada y con historial real
-     (ej. `account`, `contact`, o alguna entidad custom que sepas que tiene cambios auditados).
+   - Click "Cargar entidades..." → confirmá que el combo se llena con entidades reales (solo
+     las que tienen auditoría habilitada) y que el autocompletado funciona al tipear. Si falla,
+     revisá que el usuario conectado tenga permiso para `RetrieveAllEntitiesRequest` (privilegio
+     de metadata, normalmente lo tiene cualquier rol con acceso de personalización).
+   - Elegí una entidad con historial real (del combo, o tipeando el nombre lógico directo si
+     preferís no cargar el combo).
    - Elegí un rango de fechas que incluya actividad conocida.
    - Marcá al menos "Update" en Operaciones (es el caso más importante: valida que
      `AuditChangeDataParser` esté leyendo bien el XML real de `changedata` — si el formato que
      devuelve tu entorno difiere del asumido, `OldValues`/`NewValues` van a salir vacíos incluso
      con registros de auditoría reales).
-   - Click "Extraer" → confirmá que la grilla se llena y que las columnas se ven razonables
-     (fecha, entidad, acción, usuario). Si `OldValues`/`NewValues` quedan vacíos en updates que
-     sabés que cambiaron campos, es el primer bug a reportar.
+   - Click "Extraer" → confirmá que la grilla se llena, que la columna `ResumenCambios` muestra
+     algo como `nombre: valor anterior → valor nuevo` en los updates, y que el resto de las
+     columnas se ven razonables (fecha, entidad, acción, usuario). Si `ResumenCambios` queda
+     vacío en updates que sabés que cambiaron campos, es el primer bug a reportar.
+   - Con una entidad de mucho volumen, probá cancelar la extracción a mitad de camino (botón
+     "Cancelar" que muestra el propio host mientras corre `WorkAsync`) y confirmá que la grilla
+     igual se llena con los registros obtenidos hasta ese punto.
+   - Bajá el "Máximo de registros" a un número chico (ej. 100) con una entidad de mucho volumen
+     y confirmá que la extracción corta ahí en vez de seguir paginando.
    - Click "Exportar..." → elegí un formato y una ruta, confirmá que el archivo se genera y que
      abre bien (Excel/CSV/JSON según corresponda).
 3. **Pestaña "Validar":**
@@ -159,6 +182,8 @@ nombre exacto varía entre versiones) → apuntar a este `.nupkg`.
 ## Estructura
 
 ```
+.github/workflows/
+  build.yml                                     CI: build + tests en cada push/PR
 src/
   AuditHistoryExtractorPro.XrmToolBox.Core/     Lógica pura (modelos, query builder, export, comparación)
   AuditHistoryExtractorPro.XrmToolBox.Plugin/   UserControl + integración con el host de XrmToolBox
@@ -166,6 +191,7 @@ tests/
   AuditHistoryExtractorPro.XrmToolBox.Core.Tests/
 packaging/
   AuditHistoryExtractorPro.XrmToolBox.nuspec
+Directory.Build.props                            Versión compartida por Core y Plugin
 ```
 
 ## Próximos pasos (roadmap corto)
@@ -173,8 +199,10 @@ packaging/
 1. ~~`AuditChangeDataParser` (parseo de `changedata`)~~ — hecho.
 2. ~~Grilla de resultados en `ExtraccionView`~~ — hecho.
 3. ~~Ícono real~~ — hecho.
-4. **Pruebas manuales en una instancia real de XrmToolBox + Dataverse de prueba** — próximo
+4. ~~CI, cancelación, límite visible, combo de entidades con metadata, resumen de cambios en
+   grilla, versión centralizada~~ — hecho.
+5. **Pruebas manuales en una instancia real de XrmToolBox + Dataverse de prueba** — próximo
    paso real, ver sección de arriba.
-5. Empaquetado y distribución interna (`.nupkg` local) — ya validado el mecanismo, falta el
-   paso 4 antes de considerarlo listo para repartir.
-6. Recolectar feedback de 2-3 usuarios internos antes de evaluar publicación pública.
+6. Empaquetado y distribución interna (`.nupkg` local) — ya validado el mecanismo, falta el
+   paso 5 antes de considerarlo listo para repartir.
+7. Recolectar feedback de 2-3 usuarios internos antes de evaluar publicación pública.

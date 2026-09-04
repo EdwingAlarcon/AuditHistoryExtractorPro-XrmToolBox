@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Fuente única de la versión del plugin: la heredan automáticamente Core y Plugin
+    (MSBuild importa este archivo en todo proyecto bajo este directorio). El .nuspec de
+    packaging/ sigue necesitando que se le pase explícitamente al empaquetar
+    (nuget pack ... -Version X.Y.Z), ya que no arma el paquete desde un .csproj — ver
+    docs/README.md para el comando completo.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

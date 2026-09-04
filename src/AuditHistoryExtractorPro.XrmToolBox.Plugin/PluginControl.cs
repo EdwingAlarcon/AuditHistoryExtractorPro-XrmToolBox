@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Composition;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using AuditHistoryExtractorPro.XrmToolBox.Core.Comparison;
 using AuditHistoryExtractorPro.XrmToolBox.Core.Models;
@@ -61,6 +62,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
 
             _extraccionView = new ExtraccionView { Dock = DockStyle.Fill };
             _extraccionView.SolicitarExtraccion += filtros => EjecutarExtraccion(filtros);
+            _extraccionView.SolicitarEntidades += EjecutarCargaEntidades;
 
             _validarView = new ValidarView { Dock = DockStyle.Fill };
             _validarView.SolicitarValidacion += (entidad, auditId) => EjecutarValidacion(entidad, auditId);
@@ -77,30 +79,40 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
 
         private void EjecutarExtraccion(AuditQueryFilters filtros)
         {
+            // Se acumula en una variable de método (no en args.Result) para poder mostrar los
+            // registros ya extraídos incluso si el usuario cancela a mitad de camino: al cancelar,
+            // RunWorkerCompletedEventArgs.Result no es accesible, pero esta lista sí.
+            var registros = new List<AuditRecord>();
+
             WorkAsync(new WorkAsyncInfo
             {
                 Message = "Extrayendo historial de auditoría...",
+                IsCancelable = true,
                 Work = (worker, args) =>
                 {
                     var query = AuditQueryBuilder.Build(filtros);
-                    var registros = new List<AuditRecord>();
 
-                    // Paginación estándar de Dataverse (5000 filas por página).
+                    // Paginación estándar de Dataverse (5000 filas por página), acotada por
+                    // filtros.MaxRegistros (no se puede combinar TopCount con PageInfo).
                     query.PageInfo = new Microsoft.Xrm.Sdk.Query.PagingInfo { Count = 5000, PageNumber = 1 };
                     while (true)
                     {
+                        if (worker.CancellationPending)
+                        {
+                            args.Cancel = true;
+                            return;
+                        }
+
                         var resultado = Service.RetrieveMultiple(query);
                         foreach (var e in resultado.Entities)
                             registros.Add(MapearEntidadAuditRecord(e));
 
                         worker.ReportProgress(0, $"{registros.Count} registros extraídos...");
 
-                        if (!resultado.MoreRecords) break;
+                        if (!resultado.MoreRecords || registros.Count >= filtros.MaxRegistros) break;
                         query.PageInfo.PageNumber++;
                         query.PageInfo.PagingCookie = resultado.PagingCookie;
                     }
-
-                    args.Result = registros;
                 },
                 ProgressChanged = args => SetWorkingMessage(args.UserState?.ToString() ?? "Procesando..."),
                 PostWorkCallBack = args =>
@@ -109,10 +121,55 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                     {
                         MessageBox.Show(this, $"Error al extraer: {args.Error.Message}", "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        _extraccionView.MostrarResultados(registros);
                         return;
                     }
 
-                    _extraccionView.MostrarResultados((List<AuditRecord>)args.Result);
+                    if (args.Cancelled)
+                    {
+                        MessageBox.Show(this,
+                            $"Extracción cancelada. Se muestran los {registros.Count} registros obtenidos hasta el momento.",
+                            "Extracción cancelada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+
+                    _extraccionView.MostrarResultados(registros);
+                }
+            });
+        }
+
+        private void EjecutarCargaEntidades()
+        {
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Cargando entidades con auditoría habilitada...",
+                Work = (worker, args) =>
+                {
+                    var request = new Microsoft.Xrm.Sdk.Messages.RetrieveAllEntitiesRequest
+                    {
+                        EntityFilters = Microsoft.Xrm.Sdk.Metadata.EntityFilters.Entity,
+                        RetrieveAsIfPublished = false
+                    };
+
+                    var response = (Microsoft.Xrm.Sdk.Messages.RetrieveAllEntitiesResponse)Service.Execute(request);
+
+                    args.Result = response.EntityMetadata
+                        .Where(m => m.IsAuditEnabled?.Value == true && !string.IsNullOrWhiteSpace(m.LogicalName))
+                        .Select(m => new EntidadAuditable(
+                            m.LogicalName,
+                            m.DisplayName?.UserLocalizedLabel?.Label ?? m.LogicalName))
+                        .OrderBy(x => x.DisplayName)
+                        .ToList();
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (args.Error != null)
+                    {
+                        MessageBox.Show(this, $"Error al cargar entidades: {args.Error.Message}", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    _extraccionView.CargarEntidades((List<EntidadAuditable>)args.Result);
                 }
             });
         }

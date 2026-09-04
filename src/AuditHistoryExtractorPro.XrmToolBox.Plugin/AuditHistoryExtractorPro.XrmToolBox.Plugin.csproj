@@ -8,7 +8,7 @@
     <AssemblyName>AuditHistoryExtractorPro.XrmToolBox.Plugin</AssemblyName>
     <RootNamespace>AuditHistoryExtractorPro.XrmToolBox.Plugin</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <Version>0.1.0</Version>
+    <!-- Version: heredada de Directory.Build.props en la raíz del repo (fuente única). -->
   </PropertyGroup>
 
   <ItemGroup>

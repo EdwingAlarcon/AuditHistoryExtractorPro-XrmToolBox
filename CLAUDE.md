@@ -34,7 +34,7 @@ solo usuario que ofrece XrmToolBox.
 
 ## Estado actual (última sesión: 2026-09-04)
 
-**Compila de punta a punta** (`Core`, `Plugin`, `Core.Tests` — 0 errores, 6/6 tests OK vía
+**Compila de punta a punta** (`Core`, `Plugin`, `Core.Tests` — 0 errores, 9/9 tests OK vía
 `dotnet build` / `dotnet test`). Ver `docs/README.md` para el detalle de estructura y estado.
 Resumen:
 
@@ -78,6 +78,31 @@ Resumen:
   propio proyecto (`Plugin.dll`, `Core.dll`), los 8 DLLs de terceros de arriba, y el ícono. No
   copiar ensamblados del SDK/host (`Microsoft.Xrm.Sdk.dll`, `XrmToolBox.Extensibility.dll`,
   etc.) — esos ya están cargados por el host y duplicarlos puede romper el assembly loading.
+- ✅ **Bug real corregido antes de probarse**: `AuditQueryBuilder` seteaba `TopCount` en la
+  `QueryExpression` Y `PluginControl.EjecutarExtraccion` seteaba `PageInfo` — Dataverse no
+  permite combinar ambos en la misma consulta (falla en runtime). Se sacó `TopCount`; el límite
+  de `MaxRegistros` ahora se aplica cortando la paginación del lado del cliente.
+- ✅ **Cancelación real en "Extraer"**: `WorkAsyncInfo.IsCancelable = true` + chequeo de
+  `worker.CancellationPending` en cada página. Al cancelar, se muestran los registros ya
+  obtenidos hasta ese punto (se acumulan en una variable de método, no en `args.Result`, porque
+  `RunWorkerCompletedEventArgs.Result` no es accesible cuando `Cancelled == true`).
+- ✅ **`MaxRegistros` expuesto en la UI**: `NumericUpDown` en "Extraer" (100 a 500.000, default
+  50.000) en vez de quedar fijo y oculto en el modelo.
+- ✅ **Combo de entidades con autocompletado**: botón "Cargar entidades..." dispara
+  `RetrieveAllEntitiesRequest` (filtrando solo entidades con `IsAuditEnabled = true`) y llena un
+  `ComboBox` con autocompletado — reduce el error de tipear mal el nombre lógico, que antes daba
+  "0 resultados" en silencio. Sigue aceptando texto libre si el usuario no quiere cargar el combo.
+- ✅ **`AuditRecord.ResumenCambios`**: propiedad calculada ("campo: antes → después") que arma la
+  grilla de "Extraer" sin exponer los diccionarios `OldValues`/`NewValues` crudos (que se siguen
+  ocultando como columnas). Con 3 tests unitarios.
+- ✅ **Versión centralizada**: `Directory.Build.props` en la raíz fija `<Version>0.1.0</Version>`,
+  heredada por `Core.csproj` (antes no tenía `<Version>` propia y su ensamblado quedaba en
+  `1.0.0.0` por default — bug real, ya corregido: ahora `0.1.0.0` en ambos). `Plugin.csproj` tiene
+  `GenerateAssemblyInfo=false`, así que su versión real la sigue gobernando `AssemblyInfo.cs`
+  (manual, por los atributos MEF) — quedan 2 lugares para sincronizar al bumpear versión
+  (`AssemblyInfo.cs` + `packaging/*.nuspec`), uno menos que antes.
+- ✅ **CI en GitHub Actions** (`.github/workflows/build.yml`): `dotnet build` + `dotnet test` en
+  cada push/PR a `master`, en `windows-latest` (necesario por `net462`).
 - ⚠️ Sigue sin probarse contra una instancia real de XrmToolBox/Dataverse (solo se validó que
   compila, que los tests unitarios de `Core` pasan, y que el `.nupkg` empaqueta correctamente;
   no hay smoke test end-to-end con el host real). Ver instrucciones de prueba manual abajo.
@@ -86,12 +111,16 @@ Resumen:
 
 1. ~~Previsualización en grilla en `ExtraccionView`~~ — hecho.
 2. ~~Generar `PluginPackage.png` real~~ — hecho.
-3. **Probar en una instancia real de XrmToolBox contra un entorno Dataverse de prueba** — ver
+3. ~~CI, cancelación, límite visible, combo de entidades, resumen de cambios en grilla,
+   versión centralizada~~ — hecho (ver arriba).
+4. **Probar en una instancia real de XrmToolBox contra un entorno Dataverse de prueba** — ver
    `docs/README.md#cómo-probar-en-una-instancia-real` para el paso a paso. Es el primer punto
-   pendiente real; nada de lo anterior se validó contra un host XrmToolBox de verdad.
-4. Empaquetar y distribuir internamente (ya validado que `dotnet pack` genera el `.nupkg`
-   correctamente — falta el paso 3 antes de considerar esto "distribuible").
-5. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
+   pendiente real; nada de lo anterior se validó contra un host XrmToolBox de verdad. Esta vez
+   incluye probar también el combo de entidades (permisos para `RetrieveAllEntitiesRequest`) y
+   la cancelación de una extracción larga.
+5. Empaquetar y distribuir internamente (ya validado que el `.nupkg` empaqueta correctamente —
+   falta el paso 4 antes de considerar esto "distribuible").
+6. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
    del Plugin Store.
 
 ## Convenciones

@@ -22,7 +22,9 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Queries
                 ColumnSet = new ColumnSet(
                     "auditid", "createdon", "objectid", "objecttypecode",
                     "action", "operation", "userid", "changedata"),
-                TopCount = filtros.MaxRegistros,
+                // Sin TopCount: Dataverse no permite combinarlo con paginación (PageInfo), que es
+                // como se recorre el resultado en PluginControl.EjecutarExtraccion. El límite de
+                // MaxRegistros se aplica ahí, cortando la paginación al alcanzarlo.
                 Orders = { new OrderExpression("createdon", OrderType.Descending) }
             };
 

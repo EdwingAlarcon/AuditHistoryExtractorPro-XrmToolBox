@@ -2,6 +2,7 @@
 
 🌐 [English](README.en.md) | **Español**
 
+[![Build and Test](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml/badge.svg)](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.6.2-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
 [![XrmToolBox](https://img.shields.io/badge/XrmToolBox-Plugin-0072C6.svg)](https://www.xrmtoolbox.com/)
@@ -11,8 +12,10 @@ historial de auditoría de Dataverse** bajo demanda, sin necesidad de desplegar 
 
 ## Funcionalidad
 
-- **Extraer**: filtrar historial de auditoría por entidad, rango de fechas y tipo de operación
-  (Create/Update/Delete/Access), previsualizar en grilla, y exportar a Excel, CSV o JSON.
+- **Extraer**: filtrar historial de auditoría por entidad (con autocompletado desde metadata
+  real), rango de fechas y tipo de operación (Create/Update/Delete/Access), previsualizar en
+  grilla (con un resumen legible de qué campos cambiaron), cancelar una extracción larga en
+  curso, y exportar a Excel, CSV o JSON.
 - **Validar**: comparar un registro de auditoría puntual (por `AuditId`) contra el estado
   actual del registro en Dataverse — útil para detectar si un valor auditado sigue vigente.
 
