@@ -4,14 +4,10 @@ Guía de contexto para Claude Code al trabajar en este repositorio.
 
 ## Qué es este proyecto
 
-Plugin de **XrmToolBox** que reimplementa, para uso interactivo bajo demanda, un subconjunto
-de la funcionalidad de `AuditHistoryExtractorPro` (app Blazor Server + Worker Service on-premise,
-repo hermano en `C:\Users\user\Documents\Repo\audit-history-extractor-pro`). **Son proyectos
-independientes, sin dependencia de código en runtime entre sí.** Este repo nace de un análisis
-de viabilidad hecho en una sesión de Claude Code sobre el repo original (2026-09-04): se
-concluyó que convertir la app completa en plugin no era viable (Blazor Server / Worker 24x7 /
-jobs persistentes no encajan en el modelo de host interactivo de un solo usuario de
-XrmToolBox), y que lo correcto era extraer solo la parte "on-demand" como proyecto nuevo.
+Plugin de **XrmToolBox** para extraer, exportar y validar el historial de auditoría de
+Dataverse bajo demanda, sin necesidad de desplegar una app propia — pensado para el trabajo
+manual/ad-hoc de un consultor frente al cliente, dentro del modelo de host interactivo de un
+solo usuario que ofrece XrmToolBox.
 
 ## Decisiones ya tomadas (no re-discutir sin motivo)
 
@@ -21,15 +17,13 @@ XrmToolBox), y que lo correcto era extraer solo la parte "on-demand" como proyec
   exportado (Excel/CSV/JSON) sí queda en disco donde el usuario lo guardó, pero el plugin no
   lo recuerda al reabrir. Es una decisión deliberada (menos superficie de bugs, bajo valor en
   herramienta de uso puntual) y es aditiva: se puede agregar después sin rediseñar nada.
-- **Sin extracción incremental / jobs 24x7** — eso lo sigue cubriendo el `Worker` de la app
-  original. Ambos proyectos son complementarios: Worker para automatización desatendida,
-  este plugin para trabajo manual/ad-hoc de un consultor frente al cliente.
+- **Sin extracción incremental / jobs 24x7** — fuera de alcance: XrmToolBox es un host
+  interactivo de un solo usuario, no encaja con jobs persistentes en background.
 - **Target framework: `net462`** (tanto `Core` como `Plugin`) — compatibilidad máxima con el
   host de XrmToolBox actual, que sigue siendo mayoritariamente .NET Framework 4.6.2. No migrar
   a .NET 8 sin reevaluar la adopción real de "XrmToolBox 2.0".
 - **Sin autenticación propia** — el plugin recibe `IOrganizationService`/`ConnectionDetail` ya
-  autenticados desde el host (`PluginControlBase.UpdateConnection`). No portar
-  `AuthenticationProviderFactory` del repo original.
+  autenticados desde el host (`PluginControlBase.UpdateConnection`).
 - **Distribución:** ahora interna (`.nupkg` local, "Install from disk"). Meta declarada por el
   usuario: publicación pública en el XrmToolBox Plugin Store una vez validado con usuarios
   reales — diseñar/documentar pensando en eventual certificación pública, pero sin bloquear el
@@ -90,6 +84,6 @@ Resumen:
 
 ## Convenciones
 
-- Comentarios y textos de UI en español, igual que el repo original.
-- No portar código del repo original 1:1 — se reescribe adaptado al modelo de host de
-  XrmToolBox (sin DI de MediatR, sin `IHostedService`, sin `appsettings.json`).
+- Comentarios y textos de UI en español.
+- Sin DI de MediatR, sin `IHostedService`, sin `appsettings.json` — el modelo de host de
+  XrmToolBox no los necesita (una sola conexión, un solo usuario, sin jobs en background).

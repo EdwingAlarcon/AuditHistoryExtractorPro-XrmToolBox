@@ -1,8 +1,7 @@
 # Audit History Extractor Pro — Plugin XrmToolBox
 
-Proyecto **independiente** de `AuditHistoryExtractorPro` (la app Blazor/Worker on-premise).
-No comparte código en runtime con ese repo: es una reimplementación del subconjunto de
-funcionalidad que tiene sentido en un host interactivo de un solo usuario.
+Plugin de XrmToolBox para extraer, exportar y validar el historial de auditoría de Dataverse
+bajo demanda, dentro del modelo de host interactivo de un solo usuario que ofrece XrmToolBox.
 
 ## Estado actual
 
@@ -32,8 +31,8 @@ correctamente. **Todavía no se probó contra una instancia real de XrmToolBox/D
 - ✅ Validar (spot-check) un `AuditId` puntual contra el estado actual en Dataverse.
 - ❌ Sin reporte de roles de seguridad (excluido a pedido explícito).
 - ❌ Sin persistencia de historial entre sesiones (todo en memoria — ver justificación abajo).
-- ❌ Sin extracción incremental / jobs 24x7 (eso lo sigue cubriendo el `Worker` de la app
-  principal; ambos proyectos son complementarios, no reemplazos).
+- ❌ Sin extracción incremental / jobs 24x7 (fuera de alcance: XrmToolBox es un host
+  interactivo de un solo usuario, no encaja con jobs persistentes en background).
 
 ### Sobre la persistencia (o la falta de ella)
 
