@@ -35,13 +35,20 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Parsing
             var root = doc.Root;
             if (root == null) return resultado;
 
-            LlenarValores(root.Element("oldValues"), resultado.OldValues);
-            LlenarValores(root.Element("newValues"), resultado.NewValues);
+            LlenarValores(root.Element("oldValues"), resultado.OldValues, resultado.LookupOldValues);
+            LlenarValores(root.Element("newValues"), resultado.NewValues, resultado.LookupNewValues);
 
             return resultado;
         }
 
-        private static void LlenarValores(XElement contenedor, IDictionary<string, string> destino)
+        /// <summary>
+        /// Para un atributo lookup, Dataverse escribe el Id en el atributo XML "value" y el
+        /// nombre legible (display name) como texto del nodo (ej. &lt;ownerid value="{guid}"&gt;
+        /// Juan Pérez&lt;/ownerid&gt;). Los atributos no-lookup no tienen texto de nodo (nodo
+        /// autocontenido, solo "value") — por eso alcanza con chequear que haya texto y que
+        /// difiera del Id para separar uno de otro sin conocer el tipo de atributo de antemano.
+        /// </summary>
+        private static void LlenarValores(XElement contenedor, IDictionary<string, string> destino, IDictionary<string, string> destinoLookup)
         {
             if (contenedor == null) return;
 
@@ -50,8 +57,16 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Parsing
                 var nombre = campo.Name.LocalName;
                 if (string.IsNullOrWhiteSpace(nombre)) continue;
 
-                var valor = campo.Attribute("value")?.Value ?? campo.Value;
+                var valorAttr = campo.Attribute("value")?.Value;
+                var valor = valorAttr ?? campo.Value;
                 destino[nombre] = valor;
+
+                var textoNodo = campo.Value;
+                if (valorAttr != null && !string.IsNullOrWhiteSpace(textoNodo) &&
+                    !string.Equals(textoNodo, valorAttr, System.StringComparison.Ordinal))
+                {
+                    destinoLookup[nombre] = textoNodo;
+                }
             }
         }
     }
@@ -61,5 +76,11 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Parsing
     {
         public IDictionary<string, string> OldValues { get; } = new Dictionary<string, string>();
         public IDictionary<string, string> NewValues { get; } = new Dictionary<string, string>();
+
+        /// <summary>Display name del valor anterior, solo para atributos lookup. Ver <see cref="AuditChangeDataParser"/>.</summary>
+        public IDictionary<string, string> LookupOldValues { get; } = new Dictionary<string, string>();
+
+        /// <summary>Display name del valor nuevo, solo para atributos lookup.</summary>
+        public IDictionary<string, string> LookupNewValues { get; } = new Dictionary<string, string>();
     }
 }

@@ -194,6 +194,54 @@ Resumen:
   Windows PowerShell clásico (5.1) interpreta mal los acentos del archivo y tira
   `TerminatorExpectedAtEndOfString` — se le agregó BOM.
 
+- ✅ **NullReferenceException al abrir la herramienta ("Referencia a objeto no establecida...")
+  — corregido.** `_extraccionView`/`_validarView` se creaban en el evento `Load` de
+  `PluginControl`, pero el host llama a `UpdateConnection` (que las usa) apenas instancia el
+  control vía `Plugin.GetControl()` — antes de que el control tenga handle de ventana y dispare
+  `Load`. Se movió la construcción de las vistas al constructor.
+- ✅ **Ícono rediseñado.** El anterior salía de estirar un PNG de 32×32 a 150×150 sin
+  antialiasing real (se veía borroso). Rediseñado a 512×512 con supersampling 4×
+  (documento + lupa); se regeneraron `SmallImageBase64` (50×50), `BigImageBase64` (150×150) y
+  `Resources\PluginPackage.png` (32×32) a partir de ese original.
+- ✅ **Paridad de columnas con la app web hermana (`audit-history-extractor-pro`) y fix del
+  límite silencioso de registros (2026-09-04, feedback directo del usuario tras probar el
+  plugin).** El usuario notó dos problemas reales comparando contra la app web:
+  1. **Columnas de más en la app web.** Su export CSV (17 columnas, esquema
+     `RecordId, AuditId, EntityId, ActionId, OperationId, OldValue, NewValue, CreatedOn,
+     EntityName, UserId, AttributeName, RecordKeyValue, Action, Operation, Username,
+     LookupOldValue, LookupNewValue`) es **una fila por campo cambiado**; el plugin exportaba
+     una fila por evento con los cambios colapsados en texto libre (`ResumenCambios`), sin
+     `operation` (el DML base, atributo Dataverse distinto de `action`, ya estaba en el
+     `ColumnSet` de `AuditQueryBuilder` pero no se leía) ni el *display name* de los lookups
+     (`LookupOldValue`/`LookupNewValue`). Se agregó `AuditRecord.Operation`
+     (nuevo enum `AuditOperation`) y `LookupOldValues`/`LookupNewValues` (diccionarios, igual
+     forma que `OldValues`/`NewValues`). El *display name* del lookup se obtiene del propio XML
+     de `changedata` que ya se leía — Dataverse pone el Id en el atributo `value` del nodo y el
+     nombre legible como texto del nodo (`AuditChangeDataParser` ahora separa ambos). **A
+     propósito NO se migró a `RetrieveAuditDetailsRequest`** (que es lo que realmente usa la app
+     web, con una llamada SDK extra por registro vía batch) — se prefirió no pagar ese costo de
+     performance en una herramienta interactiva on-demand; el trade-off es que el *display name*
+     del lookup solo se captura cuando Dataverse lo incluye en el `changedata` (que es el caso
+     normal, pero no 100% garantizado como si se pidiera explícitamente vía
+     `RetrieveAuditDetailsRequest`). Los exportadores CSV/Excel se reescribieron para aplanar
+     cada `AuditRecord` a una fila por campo cambiado (`AuditExportRowFlattener`, compartido por
+     ambos, con fallback a una fila con columnas de campo vacías para eventos sin cambios de
+     campo — Create/Delete/Access). El export JSON no se tocó: como no es tabular, sigue
+     serializando el objeto completo (ahora con los campos nuevos incluidos). La grilla de
+     previsualización interactiva **se dejó como estaba** (evento por evento, con
+     `ResumenCambios`) — es más legible para escanear visualmente; el aplanado detallado es
+     solo al exportar, que es lo que consume el usuario río abajo.
+  2. **Límite de registros silencioso.** `MaxRegistros` cortaba la paginación sin avisar si
+     había más registros disponibles — para una herramienta de auditoría/compliance eso es
+     grave (se puede creer que se vio todo el historial cuando en realidad se cortó). Se agregó
+     `AuditQueryFilters.SinLimite` (default `true` — sin límite, saca *todo* lo que haya para el
+     rango de fechas, igual que la app web). El checkbox "Sin límite (traer todo)" en
+     `ExtraccionView` está tildado por defecto y deshabilita el `NumericUpDown`; si el usuario
+     lo destilda y el límite corta el resultado habiendo más disponibles,
+     `PluginControl.EjecutarExtraccion` ahora lo detecta (`seCortoPorLimite`, distinto de
+     "se acabaron las páginas") y muestra una advertencia explícita en vez de terminar en
+     silencio.
+
 ## Próximos pasos (en orden)
 
 1. ~~Previsualización en grilla en `ExtraccionView`~~ — hecho.

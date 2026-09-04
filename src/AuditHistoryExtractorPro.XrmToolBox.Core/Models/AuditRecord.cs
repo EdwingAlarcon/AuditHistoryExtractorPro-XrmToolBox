@@ -15,6 +15,10 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Models
         public Guid RecordId { get; set; }
         public string RecordPrimaryName { get; set; }
         public AuditAction Action { get; set; }
+
+        /// <summary>Operación CRUD base (más gruesa que <see cref="Action"/>).</summary>
+        public AuditOperation Operation { get; set; }
+
         public string UserFullName { get; set; }
         public Guid UserId { get; set; }
 
@@ -23,6 +27,17 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Models
 
         /// <summary>Valores nuevos por atributo.</summary>
         public IDictionary<string, string> NewValues { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Nombre legible (display name) del valor anterior, solo para atributos lookup —
+        /// <see cref="OldValues"/> guarda el Id crudo. Viene del texto del nodo XML de
+        /// <c>changedata</c> (Dataverse lo incluye ahí para lookups, además del Id en el
+        /// atributo "value"). Vacío para atributos que no son lookup.
+        /// </summary>
+        public IDictionary<string, string> LookupOldValues { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>Nombre legible del valor nuevo, solo para atributos lookup. Ver <see cref="LookupOldValues"/>.</summary>
+        public IDictionary<string, string> LookupNewValues { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
         /// Resumen legible de los campos que cambiaron ("campo: antes → después"), calculado

@@ -81,6 +81,11 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
             // registros ya extraídos incluso si el usuario cancela a mitad de camino: al cancelar,
             // RunWorkerCompletedEventArgs.Result no es accesible, pero esta lista sí.
             var registros = new List<AuditRecord>();
+            // true si se cortó por MaxRegistros habiendo más disponibles (filtros.SinLimite=false)
+            // — a diferencia de terminar porque Dataverse ya no tiene más páginas. Distinguir esto
+            // es necesario para poder avisarle al usuario que el resultado está incompleto: antes
+            // el corte era silencioso y no había forma de saber si faltaban registros.
+            var seCortoPorLimite = false;
 
             WorkAsync(new WorkAsyncInfo
             {
@@ -91,7 +96,8 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                     var query = AuditQueryBuilder.Build(filtros);
 
                     // Paginación estándar de Dataverse (5000 filas por página), acotada por
-                    // filtros.MaxRegistros (no se puede combinar TopCount con PageInfo).
+                    // filtros.MaxRegistros solo si filtros.SinLimite es false (no se puede
+                    // combinar TopCount con PageInfo, por eso el límite se aplica acá).
                     query.PageInfo = new Microsoft.Xrm.Sdk.Query.PagingInfo { Count = 5000, PageNumber = 1 };
                     while (true)
                     {
@@ -107,7 +113,12 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
 
                         worker.ReportProgress(0, $"{registros.Count} registros extraídos...");
 
-                        if (!resultado.MoreRecords || registros.Count >= filtros.MaxRegistros) break;
+                        if (!resultado.MoreRecords) break;
+                        if (!filtros.SinLimite && registros.Count >= filtros.MaxRegistros)
+                        {
+                            seCortoPorLimite = true;
+                            break;
+                        }
                         query.PageInfo.PageNumber++;
                         query.PageInfo.PagingCookie = resultado.PagingCookie;
                     }
@@ -128,6 +139,14 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                         MessageBox.Show(this,
                             $"Extracción cancelada. Se muestran los {registros.Count} registros obtenidos hasta el momento.",
                             "Extracción cancelada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else if (seCortoPorLimite)
+                    {
+                        MessageBox.Show(this,
+                            $"Se alcanzó el límite configurado de {filtros.MaxRegistros:N0} registros, pero hay más " +
+                            "disponibles para estos filtros — el resultado NO está completo. Tildá \"Sin límite\" o " +
+                            "acotá el rango de fechas para traerlos todos.",
+                            "Resultado incompleto", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
 
                     _extraccionView.MostrarResultados(registros);
@@ -214,10 +233,13 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                 RecordId = e.GetAttributeValue<EntityReference>("objectid")?.Id ?? Guid.Empty,
                 RecordPrimaryName = e.GetAttributeValue<EntityReference>("objectid")?.Name,
                 Action = (AuditAction)(e.GetAttributeValue<OptionSetValue>("action")?.Value ?? 0),
+                Operation = (AuditOperation)(e.GetAttributeValue<OptionSetValue>("operation")?.Value ?? 0),
                 UserFullName = e.GetAttributeValue<AliasedValue>("u.fullname")?.Value?.ToString(),
                 UserId = e.GetAttributeValue<EntityReference>("userid")?.Id ?? Guid.Empty,
                 OldValues = changeData.OldValues,
-                NewValues = changeData.NewValues
+                NewValues = changeData.NewValues,
+                LookupOldValues = changeData.LookupOldValues,
+                LookupNewValues = changeData.LookupNewValues
             };
         }
 

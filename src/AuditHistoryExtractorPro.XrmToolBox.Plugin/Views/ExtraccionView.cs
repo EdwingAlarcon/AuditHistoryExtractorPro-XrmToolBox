@@ -37,6 +37,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
         private DateTimePicker dtDesde;
         private DateTimePicker dtHasta;
         private CheckedListBox clbOperaciones;
+        private CheckBox chkSinLimite;
         private NumericUpDown nudMaxRegistros;
         private ComboBox cboFormato;
         private Button btnExtraer;
@@ -79,8 +80,13 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
             layout.Controls.Add(clbOperaciones, 1, 3);
 
             layout.Controls.Add(new System.Windows.Forms.Label { Text = "Máximo de registros:", AutoSize = true }, 0, 4);
-            nudMaxRegistros = new NumericUpDown { Width = 100, Minimum = 100, Maximum = 500_000, Increment = 1000, Value = 50_000, ThousandsSeparator = true };
-            layout.Controls.Add(nudMaxRegistros, 1, 4);
+            var panelMax = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
+            nudMaxRegistros = new NumericUpDown { Width = 100, Minimum = 100, Maximum = 2_000_000, Increment = 1000, Value = 50_000, ThousandsSeparator = true, Enabled = false };
+            chkSinLimite = new CheckBox { Text = "Sin límite (traer todo)", AutoSize = true, Checked = true, Margin = new Padding(0, 4, 8, 0) };
+            chkSinLimite.CheckedChanged += (s, e) => nudMaxRegistros.Enabled = !chkSinLimite.Checked;
+            panelMax.Controls.Add(chkSinLimite);
+            panelMax.Controls.Add(nudMaxRegistros);
+            layout.Controls.Add(panelMax, 1, 4);
 
             btnExtraer = new Button { Text = "Extraer", AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
             btnExtraer.Click += BtnExtraer_Click;
@@ -150,6 +156,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
                 FechaDesde = dtDesde.Value.Date,
                 FechaHasta = dtHasta.Value.Date,
                 Operaciones = clbOperaciones.CheckedItems.Cast<AuditAction>().ToList(),
+                SinLimite = chkSinLimite.Checked,
                 MaxRegistros = (int)nudMaxRegistros.Value
             };
 
@@ -172,7 +179,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin.Views
 
         private void OcultarColumnasDeDetalle()
         {
-            foreach (var nombre in new[] { "OldValues", "NewValues" })
+            foreach (var nombre in new[] { "OldValues", "NewValues", "LookupOldValues", "LookupNewValues" })
             {
                 if (grid.Columns.Contains(nombre))
                     grid.Columns[nombre].Visible = false;
