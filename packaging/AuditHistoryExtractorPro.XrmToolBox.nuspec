@@ -19,7 +19,7 @@
     <!--
       Sin <dependencies>: la convención de XrmToolBox para plugins NO es declarar
       dependencias NuGet (el instalador de Tool Library no las resuelve contra nuget.org),
-      sino incluir directamente en <files>, bajo lib\net462\Plugins, tanto el/los DLL del
+      sino incluir directamente en <files>, bajo lib\net48\Plugins, tanto el/los DLL del
       plugin como cualquier ensamblado de terceros que el host no traiga ya (ver más abajo).
       No incluir ensamblados del SDK de CRM/Dataverse ni del propio XrmToolBox — esos ya
       están cargados en el proceso del host.
@@ -27,9 +27,9 @@
   </metadata>
   <files>
     <!-- Ensamblados propios -->
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Core\bin\Release\net462\AuditHistoryExtractorPro.XrmToolBox.Core.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png" target="lib\net462\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Core\bin\Release\net48\AuditHistoryExtractorPro.XrmToolBox.Core.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png" target="lib\net48\Plugins" />
 
     <!--
       Dependencias de terceros que el host de XrmToolBox NO trae (las necesita Core.dll
@@ -37,13 +37,13 @@
       CsvHelper. Tomadas del bin de Release del Plugin, donde ya quedan copiadas por
       MSBuild al resolver los PackageReference.
     -->
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\ClosedXML.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\CsvHelper.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\DocumentFormat.OpenXml.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\ExcelNumberFormat.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\SixLabors.Fonts.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\XLParser.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\Irony.dll" target="lib\net462\Plugins" />
-    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\System.IO.Packaging.dll" target="lib\net462\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\ClosedXML.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\CsvHelper.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\DocumentFormat.OpenXml.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\ExcelNumberFormat.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\SixLabors.Fonts.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\XLParser.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\Irony.dll" target="lib\net48\Plugins" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net48\System.IO.Packaging.dll" target="lib\net48\Plugins" />
   </files>
 </package>

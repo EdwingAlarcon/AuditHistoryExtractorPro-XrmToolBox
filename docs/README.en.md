@@ -8,9 +8,11 @@ the single-user interactive host model that XrmToolBox provides.
 ## Current status
 
 Builds end-to-end (`Core`, `Plugin`, `Core.Tests` — 0 errors) and packages correctly.
-**The bug that kept the plugin from showing up in XrmToolBox is already fixed** (see below),
-but it's still pending confirmation against a real instance that it loads, and that the
-functional flow (Extract/Validate) works — see
+**Both bugs that kept the plugin from showing up in XrmToolBox are fixed** (a malformed MEF
+export, and referencing host assembly versions that didn't match a real install — see below),
+verified with a real MEF composition against the exact assemblies of a `1.2025.10.74`
+XrmToolBox install. Still pending confirmation that the functional flow (Extract/Validate)
+works against Dataverse — see
 [Testing against a real instance](#testing-against-a-real-instance) below.
 
 - ✅ `AuditChangeDataParser` complete (parses `oldValues`/`newValues` from the `changedata`
@@ -24,14 +26,22 @@ functional flow (Extract/Validate) works — see
 - ✅ "Validate" (spot-check an `AuditId` against the current state in Dataverse) functional.
 - ✅ `AuditRecord.ResumenCambios`: a computed column ("field: before → after") on the "Extract"
   grid for the most useful case (Update), without exposing the raw dictionaries.
-- ✅ Real SDK reference verified: the correct NuGet package is **`XrmToolBoxPackage`**
-  (not `XrmToolBox.Extensibility`, which doesn't exist as an id). Pinned to `1.2023.10.67` —
-  the last version that still ships `net462` binaries (as of `1.2025.7.71`, jul-2025, the
-  package became `net48`-only; use an earlier version than that if you need net462).
+- ✅ Real SDK reference verified and migrated to the exact host version: the correct NuGet
+  package is **`XrmToolBoxPackage`** (not `XrmToolBox.Extensibility`, which doesn't exist as an
+  id). First tried pinned to `1.2023.10.67` (the last `net462` version, before the package went
+  `net48`-only in `1.2025.7.71`, jul-2025), but testing against a real XrmToolBox instance
+  (`1.2025.10.74`) the plugin failed to load: .NET Framework refuses to reference a different
+  version of a strongly-signed host assembly (`McTools.Xrm.Connection`) than what the host
+  actually ships, without a binding redirect — and none exists for versions that old. Migrated
+  the whole project (`Core`, `Plugin`, `Core.Tests`) to **`net48`** with
+  `XrmToolBoxPackage 1.2025.10.74` (the verified real version), also adding a direct reference
+  to `MscrmTools.Xrm.Connection 1.2025.9.64` (NuGet's transitive resolution landed on an older
+  version than the real one). Verified with a real MEF composition against the exact assemblies
+  of the user's XrmToolBox install.
 - ✅ `.nuspec` corrected: it doesn't declare `XrmToolBox.Extensibility`/`XrmToolBoxPackage` as a
   NuGet dependency (the host already has it loaded, and that resolution mechanism doesn't apply
   in Tool Library) — it follows the real XrmToolBox convention: all packaged files live under
-  `lib\net462\Plugins\`, including as loose files (not as "dependencies") the third-party
+  `lib\net48\Plugins\`, including as loose files (not as "dependencies") the third-party
   assemblies the host doesn't ship (`ClosedXML` and its dependency tree, `CsvHelper`).
 - ✅ `PluginPackage.png` is a real 32x32 icon (not a placeholder).
 - ✅ Packaging verified with `nuget.exe pack` against the `.nuspec` (see below how to generate it).
@@ -96,7 +106,7 @@ host's `Plugins` folder.
 
 Building in Release (step 1) already leaves the exact 11 files you need ready in
 **`packaging\Plugins\`** — no need to fish them out of the ~150 DLLs in
-`bin\Release\net462\` (which also holds everything XrmToolBox itself already ships, that you
+`bin\Release\net48\` (which also holds everything XrmToolBox itself already ships, that you
 must NOT touch). Two ways to install from there:
 
 - **Automatic:** `powershell -File packaging\install-local.ps1` — copies everything in
@@ -119,11 +129,11 @@ nuget pack packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory
 ```
 
 The `.nuspec` already follows the real XrmToolBox convention (everything under
-`lib\net462\Plugins\`, no NuGet dependencies declared). Check that the generated `.nupkg`
+`lib\net48\Plugins\`, no NuGet dependencies declared). Check that the generated `.nupkg`
 contains, at least:
-- `lib\net462\Plugins\AuditHistoryExtractorPro.XrmToolBox.Core.dll`
-- `lib\net462\Plugins\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
-- `lib\net462\Plugins\PluginPackage.png`
+- `lib\net48\Plugins\AuditHistoryExtractorPro.XrmToolBox.Core.dll`
+- `lib\net48\Plugins\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll`
+- `lib\net48\Plugins\PluginPackage.png`
 - The `ClosedXML`/`CsvHelper` DLLs and their dependency tree listed in step 2.
 
 (you can confirm this by renaming it to `.zip` and opening it — a `.nupkg` is a zip). If your

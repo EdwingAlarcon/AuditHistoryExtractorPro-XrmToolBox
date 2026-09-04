@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- net462: mismo target que el host de XrmToolBox (compatibilidad máxima con instalaciones actuales) -->
-    <TargetFramework>net462</TargetFramework>
+    <!-- net48: mismo target que Plugin.csproj (ver el comentario ahí sobre por qué net48 y no net462) -->
+    <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <AssemblyName>AuditHistoryExtractorPro.XrmToolBox.Core</AssemblyName>
@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.51" />
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.60" />
     <PackageReference Include="ClosedXML" Version="0.102.2" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

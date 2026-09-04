@@ -4,7 +4,7 @@
 
 [![Build and Test](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml/badge.svg)](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.6.2-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
+[![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
 [![XrmToolBox](https://img.shields.io/badge/XrmToolBox-Plugin-0072C6.svg)](https://www.xrmtoolbox.com/)
 
 [XrmToolBox](https://www.xrmtoolbox.com/) plugin to **extract, export, and validate Dataverse
@@ -32,7 +32,7 @@ rationale behind each decision.
 
 - [XrmToolBox](https://www.xrmtoolbox.com/) installed.
 - A connection configured in XrmToolBox to a Dataverse / Dynamics 365 environment.
-- .NET Framework 4.6.2 or later (already bundled with XrmToolBox).
+- .NET Framework 4.8 or later (already bundled with XrmToolBox).
 
 ## Installation
 
@@ -45,7 +45,7 @@ XrmToolBox's `Plugins` folder:
 1. Build the project in `Release` (see
    [building from source](#building-from-source-for-developers) below) — that leaves the exact
    11 files you need ready in `packaging\Plugins\` (no need to fish them out of the ~150 DLLs
-   in `bin\Release\net462\`).
+   in `bin\Release\net48\`).
 2. Copy those files into `%AppData%\MscrmTools\XrmToolBox\Plugins\` (create the folder if it
    doesn't exist) — or just run `powershell -File packaging\install-local.ps1`, which does it
    for you.
@@ -55,7 +55,7 @@ XrmToolBox's `Plugins` folder:
 If your XrmToolBox version does have "Install from disk" (Tool Library → the corresponding
 button, name varies by version), you can also generate the `.nupkg` (`nuget pack
 packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory packaging\output`) and
-point it there — the `.nuspec` already follows the `lib\net462\Plugins\` structure that
+point it there — the `.nuspec` already follows the `lib\net48\Plugins\` structure that
 convention requires.
 
 ## Building from source (for developers)

@@ -1,7 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net462</TargetFramework>
+    <!--
+      net48 (no net462): XrmToolBoxPackage dejó de publicar binarios net462 desde jul-2025
+      (1.2025.7.71 en adelante). Migrado acá tras confirmar en runtime, contra una instalación
+      real de XrmToolBox 1.2025.10.74, que el plugin compilado contra la referencia vieja
+      (1.2023.10.67/net462) fallaba al cargar por mismatch de versión de ensamblados firmados
+      del host (McTools.Xrm.Connection 1.2023.6.56 referenciado vs 1.2025.9.64 real — .NET
+      Framework no permite bindear una versión distinta de un assembly firmado sin redirect, y
+      el host no trae uno para versiones tan viejas). Ver CLAUDE.md para el detalle completo.
+    -->
+    <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
@@ -13,8 +22,16 @@
 
   <ItemGroup>
     <!-- Interfaz IXrmToolBoxPlugin, PluginControlBase, WorkAsync, SettingsHelper -->
-    <PackageReference Include="XrmToolBoxPackage" Version="1.2023.10.67" />
-    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.51" />
+    <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.60" />
+    <!--
+      Referencia directa forzando la versión exacta que trae la instalación real de
+      XrmToolBox verificada (1.2025.10.74) — sin esto, NuGet resuelve transitivamente al
+      mínimo que exige XrmToolBoxPackage (1.2025.7.63), más vieja que la que el host carga en
+      runtime, y el compilador rechaza la referencia (CS1705, "assembly usa una versión
+      superior a la referenciada"). Actualizar si se detecta que el host usa otra versión.
+    -->
+    <PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +46,7 @@
     Al compilar en Release, junta en packaging/Plugins/ exactamente los archivos que hay que
     copiar a mano a la carpeta Plugins de una instalación real de XrmToolBox (ver
     docs/README.md#instalar-en-xrmtoolbox) — así no hay que rescatarlos entre los ~150 DLLs que
-    trae bin/Release/net462 por las dependencias de XrmToolBoxPackage/Microsoft.CrmSdk.
+    trae bin/Release/net48 por las dependencias de XrmToolBoxPackage/Microsoft.CrmSdk.
     Esta lista debe reflejar exactamente lo mismo que packaging/*.nuspec bajo lib\net462\Plugins\
     — si se agrega/saca una dependencia de terceros en Core, actualizar ambos lugares.
   -->

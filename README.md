@@ -4,7 +4,7 @@
 
 [![Build and Test](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml/badge.svg)](https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.6.2-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
+[![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet-framework)
 [![XrmToolBox](https://img.shields.io/badge/XrmToolBox-Plugin-0072C6.svg)](https://www.xrmtoolbox.com/)
 
 Plugin de [XrmToolBox](https://www.xrmtoolbox.com/) para **extraer, exportar y validar el
@@ -29,7 +29,7 @@ justificación de cada decisión.
 
 - [XrmToolBox](https://www.xrmtoolbox.com/) instalado.
 - Una conexión configurada en XrmToolBox a un entorno Dataverse / Dynamics 365.
-- .NET Framework 4.6.2 o superior (ya lo trae XrmToolBox).
+- .NET Framework 4.8 o superior (ya lo trae XrmToolBox).
 
 ## Instalación
 
@@ -42,7 +42,7 @@ la carpeta `Plugins` del propio XrmToolBox:
 1. Compilá el proyecto en `Release` (ver
    [instalación desde código fuente](#instalación-desde-código-fuente-para-desarrolladores)
    abajo) — eso deja listos, en `packaging\Plugins\`, los 11 archivos exactos que hacen falta
-   (no hay que rescatarlos entre los ~150 DLLs de `bin\Release\net462\`).
+   (no hay que rescatarlos entre los ~150 DLLs de `bin\Release\net48\`).
 2. Copiá esos archivos a `%AppData%\MscrmTools\XrmToolBox\Plugins\` (creá la carpeta si no
    existe) — o corré `powershell -File packaging\install-local.ps1`, que lo hace por vos.
 3. Abrí (o reiniciá) XrmToolBox — el plugin **"Audit History Extractor Pro"** debería aparecer
@@ -51,7 +51,7 @@ la carpeta `Plugins` del propio XrmToolBox:
 Si tu versión de XrmToolBox sí tiene "Install from disk" (Tool Library → botón correspondiente
 según la versión), también podés generar el `.nupkg` (`nuget pack
 packaging\AuditHistoryExtractorPro.XrmToolBox.nuspec -OutputDirectory packaging\output`) y
-apuntarle ahí — el `.nuspec` ya está armado con la estructura `lib\net462\Plugins\` que exige
+apuntarle ahí — el `.nuspec` ya está armado con la estructura `lib\net48\Plugins\` que exige
 esa convención.
 
 ## Instalación desde código fuente (para desarrolladores)

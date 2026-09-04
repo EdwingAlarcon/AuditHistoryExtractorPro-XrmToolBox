@@ -19,9 +19,11 @@ solo usuario que ofrece XrmToolBox.
   herramienta de uso puntual) y es aditiva: se puede agregar después sin rediseñar nada.
 - **Sin extracción incremental / jobs 24x7** — fuera de alcance: XrmToolBox es un host
   interactivo de un solo usuario, no encaja con jobs persistentes en background.
-- **Target framework: `net462`** (tanto `Core` como `Plugin`) — compatibilidad máxima con el
-  host de XrmToolBox actual, que sigue siendo mayoritariamente .NET Framework 4.6.2. No migrar
-  a .NET 8 sin reevaluar la adopción real de "XrmToolBox 2.0".
+- **Target framework: `net48`** (tanto `Core` como `Plugin`) — migrado desde `net462` el
+  2026-09-04 tras confirmar en runtime que `net462` + `XrmToolBoxPackage` viejo no cargaba
+  contra una instalación real de XrmToolBox (ver "Estado actual" abajo para el detalle). Seguir
+  la versión real del host de XrmToolBox instalado, no una vieja "por compatibilidad". No
+  migrar a .NET 8 sin reevaluar la adopción real de "XrmToolBox 2.0".
 - **Sin autenticación propia** — el plugin recibe `IOrganizationService`/`ConnectionDetail` ya
   autenticados desde el host (`PluginControlBase.UpdateConnection`).
 - **Distribución:** ahora interna. La Tool Library de XrmToolBox no siempre expone "Install
@@ -53,33 +55,37 @@ Resumen:
   (vía `WorkAsync`/Dataverse) y "Exportar..." (habilitado solo con datos cargados) exporta lo que
   está en la grilla a xlsx/csv/json — la exportación es E/S local, no pasa por `WorkAsync`.
 - ✅ `.nuspec` de empaquetado, `AssemblyInfo.cs`.
-- ✅ Referencia al SDK real verificada: el id de paquete correcto es **`XrmToolBoxPackage`**
-  (no `XrmToolBox.Extensibility`, que no existe). Fijado en `1.2023.10.67` — la última versión
-  que aún publica binarios `net462` (desde `1.2025.7.71`, jul-2025, el paquete pasó a ser
-  `net48`-only en NuGet; si en el futuro se necesita seguir el paquete más nuevo, ahí sí hay
-  que reevaluar la decisión de target `net462`, no antes). Con `1.2023.10.67` no hizo falta
-  tocar la API de `PluginControlBase`/`SettingsManager`/`IGitHubPlugin`/`IHelpPlugin`.
+- ✅ Referencia al SDK real verificada y **migrada a la versión exacta del host** (ver bug
+  crítico #2 más abajo): el id de paquete correcto es **`XrmToolBoxPackage`** (no
+  `XrmToolBox.Extensibility`, que no existe). Se probó primero fijado en `1.2023.10.67` (la
+  última versión `net462`, de antes de que el paquete pasara a `net48`-only en `1.2025.7.71`,
+  jul-2025) — compilaba y componía bien en una simulación MEF, pero fallaba contra una
+  instalación real. Ahora fijado en **`1.2025.10.74`** (verificado en runtime, con `net48`), más
+  una referencia directa a `MscrmTools.Xrm.Connection 1.2025.9.64` (la resolución transitiva de
+  NuGet caía en `1.2025.7.63`, más vieja que la real). No hizo falta tocar la lógica de
+  `PluginControlBase`/`SettingsManager`/`IGitHubPlugin`/`IHelpPlugin` — solo las referencias de
+  paquete y el target framework.
 - ✅ `PluginPackage.png` reemplazado por un ícono real de 32x32 (lupa sobre círculo azul).
 - ✅ `.nuspec` corregido dos veces: primero se sacó la dependencia NuGet inexistente
   (`XrmToolBox.Extensibility 4.0.0`); después se corrigió la estructura completa siguiendo la
   convención real de XrmToolBox (confirmada contra la wiki oficial de MscrmTools/XrmToolBox):
-  los DLLs van bajo `lib\net462\Plugins\` (no `lib\net462\` a secas), y las dependencias de
+  los DLLs van bajo `lib\net48\Plugins\` (no `lib\net48\` a secas), y las dependencias de
   terceros (`ClosedXML` + su árbol — `DocumentFormat.OpenXml`, `ExcelNumberFormat`,
   `SixLabors.Fonts`, `XLParser`, `Irony`, `System.IO.Packaging` —, `CsvHelper`) se incluyen
   como **archivos** dentro de `<files>`, no como `<dependencies>` NuGet (ese mecanismo de
   resolución no aplica al instalar un plugin en Tool Library).
 - ✅ Empaquetado verificado con `nuget.exe pack` real (descargado para esta sesión, ya que no
   hay Visual Studio instalado acá) y se confirmó que el `.nupkg` contiene todo bajo
-  `lib\net462\Plugins\`. No se versiona (`.gitignore` ya lo excluye) — hay que regenerarlo
+  `lib\net48\Plugins\`. No se versiona (`.gitignore` ya lo excluye) — hay que regenerarlo
   localmente antes de instalar.
 - ✅ Instalación manual documentada y automatizada: como la Tool Library de XrmToolBox no
   siempre expone "Install from disk" según la versión del host, se documentó (y es el método
   principal en `docs/README.md`) copiar los archivos directo a
   `%AppData%\MscrmTools\XrmToolBox\Plugins\`. Para no tener que rescatarlos entre los ~150 DLLs
-  de `bin\Release\net462\` (todo lo que trae `XrmToolBoxPackage`/`Microsoft.CrmSdk`, que no hay
+  de `bin\Release\net48\` (todo lo que trae `XrmToolBoxPackage`/`Microsoft.CrmSdk`, que no hay
   que tocar), `Plugin.csproj` tiene un `Target AfterTargets="Build"` (solo en `Configuration ==
   Release`) que junta los 11 archivos exactos en `packaging\Plugins\` — mismo contenido que
-  `lib\net462\Plugins\` en el `.nuspec`, hay que mantener ambas listas sincronizadas si cambian
+  `lib\net48\Plugins\` en el `.nuspec`, hay que mantener ambas listas sincronizadas si cambian
   las dependencias de terceros de `Core`. `packaging\install-local.ps1` copia esa carpeta directo
   a la instalación real de XrmToolBox (autodetecta `%AppData%\...\Plugins`, o se le puede pasar
   `-XrmToolBoxPluginsPath`). Ninguna de las dos carpetas (`packaging\Plugins\`, `packaging\output\`)
@@ -108,31 +114,51 @@ Resumen:
   (manual, por los atributos MEF) — quedan 2 lugares para sincronizar al bumpear versión
   (`AssemblyInfo.cs` + `packaging/*.nuspec`), uno menos que antes.
 - ✅ **CI en GitHub Actions** (`.github/workflows/build.yml`): `dotnet build` + `dotnet test` en
-  cada push/PR a `master`, en `windows-latest` (necesario por `net462`).
-- ✅ **BUG CRÍTICO CORREGIDO (2026-09-04, primera prueba real del usuario): el plugin no
-  aparecía en XrmToolBox.** Causa raíz: `[Export(typeof(IXrmToolBoxPlugin))]` estaba puesto
-  directo en `PluginControl` (el `UserControl : PluginControlBase`), que **no implementa**
-  `IXrmToolBoxPlugin` — implementa `IGitHubPlugin`/`IHelpPlugin`, y `PluginControlBase`
-  implementa `IXrmToolBoxPluginControl` (una interfaz *distinta*). El patrón correcto de
-  XrmToolBox (confirmado contra la wiki oficial "Develop your own custom plugin") usa **dos
-  clases separadas**: una clase descriptora chica (`Plugin : PluginBase`, nuevo archivo
-  `Plugin.cs`) que lleva el `[Export]`/`[ExportMetadata]` y solo implementa
-  `GetControl() => new PluginControl()`; el `UserControl` (`PluginControl.cs`) queda sin
-  atributos Export. MEF compone el catálogo por contrato de tipo — al exportar un tipo que no
-  satisface `IXrmToolBoxPlugin`, el host lo descarta **en silencio** (sin excepción, sin log),
-  que es exactamente el síntoma que reportó el usuario (otros plugins cargaban bien, el nuestro
-  no aparecía, logs vacíos). Verificado con una composición MEF real fuera de proceso
-  (`System.ComponentModel.Composition.Hosting.DirectoryCatalog` + `CompositionContainer` sobre
-  `packaging\Plugins\`, con Windows PowerShell clásico por ser .NET Framework real): antes del
-  fix, `GetExports<IXrmToolBoxPlugin>()` devolvía 0; después, devuelve exactamente 1, del tipo
-  `AuditHistoryExtractorPro.XrmToolBox.Plugin.Plugin`, con la metadata correcta. Detectado
-  también que la versión real de XrmToolBox del usuario es `1.2025.10.74` (casi 2 años más
-  nueva que la referencia de compilación `1.2023.10.67`) — no fue la causa (el contrato
-  `IXrmToolBoxPlugin`/`PluginBase` no cambió entre esas versiones, según lo verificado), pero
-  quedó como sospechoso descartado explícitamente, no por omisión.
-- ⚠️ Sigue sin confirmarse con el usuario que el plugin ahora carga en su XrmToolBox real (el
-  fix está verificado por composición MEF fuera de proceso, no por una corrida real del host
-  todavía). Falta también probar el flujo funcional completo (Extraer/Validar) contra Dataverse.
+  cada push/PR a `master`, en `windows-latest` (necesario por `net48`).
+- ✅ **DOS BUGS CRÍTICOS CORREGIDOS (2026-09-04, primera prueba real del usuario contra
+  XrmToolBox `1.2025.10.74`): el plugin no aparecía en XrmToolBox.** Se encontraron y
+  corrigieron en secuencia, cada uno verificado antes de pasar al siguiente:
+
+  1. **Export de MEF mal armado.** `[Export(typeof(IXrmToolBoxPlugin))]` estaba puesto directo
+     en `PluginControl` (el `UserControl : PluginControlBase`), que **no implementa**
+     `IXrmToolBoxPlugin` — implementa `IGitHubPlugin`/`IHelpPlugin`, y `PluginControlBase`
+     implementa `IXrmToolBoxPluginControl` (una interfaz *distinta*). El patrón correcto de
+     XrmToolBox (confirmado contra la wiki oficial "Develop your own custom plugin") usa **dos
+     clases separadas**: una clase descriptora chica (`Plugin : PluginBase`, nuevo archivo
+     `Plugin.cs`) que lleva el `[Export]`/`[ExportMetadata]` y solo implementa
+     `GetControl() => new PluginControl()`; el `UserControl` (`PluginControl.cs`) queda sin
+     atributos Export. MEF compone el catálogo por contrato de tipo — al exportar un tipo que
+     no satisface `IXrmToolBoxPlugin`, el host lo descarta **en silencio** (sin excepción, sin
+     log), que es exactamente el síntoma que reportó el usuario (otros plugins cargaban bien,
+     el nuestro no aparecía, logs vacíos).
+
+  2. **Referencias de ensamblado desactualizadas (`net462` → `net48`).** Corregido el bug #1 y
+     verificado por composición MEF simulada (contra el `XrmToolBoxPackage 1.2023.10.67` con el
+     que compilaba el proyecto: `GetExports<IXrmToolBoxPlugin>()` pasó de 0 a 1 export), el
+     usuario probó en su XrmToolBox real y **seguía sin aparecer**. Repitiendo la misma
+     composición MEF pero cargando los ensamblados *reales* de la instalación del usuario
+     (`C:\...\XrmToolBox.exe` y sus DLLs, no los del paquete NuGet), la composición falló con
+     `ReflectionTypeLoadException` → `No se puede cargar el archivo o ensamblado
+     'McTools.Xrm.Connection, Version=1.2023.6.56'`. Causa: `McTools.Xrm.Connection` es un
+     ensamblado firmado (tiene `PublicKeyToken`), y .NET Framework no permite bindear una
+     versión distinta a la referenciada sin una redirección explícita — que no existe en el
+     host para una versión tan vieja. Se migró `Core`/`Plugin`/`Core.Tests` de `net462` a
+     `net48`, `XrmToolBoxPackage` de `1.2023.10.67` a `1.2025.10.74` (la versión real
+     verificada), `Microsoft.CrmSdk.CoreAssemblies` de `9.0.2.51` a `9.0.2.60` (mínimo que exige
+     la nueva `XrmToolBoxPackage`), y se agregó una referencia directa a
+     `MscrmTools.Xrm.Connection 1.2025.9.64` (sin ella, NuGet resolvía transitivamente al
+     mínimo `1.2025.7.63`, más vieja que la real — mismo problema de nuevo, un escalón más
+     arriba). Re-verificado con la misma composición MEF fuera de proceso, esta vez cargando los
+     ensamblados reales del host: 1 export encontrado, tipo correcto, sin ningún error de carga.
+
+  Ambos verificados con `System.ComponentModel.Composition.Hosting.DirectoryCatalog` +
+  `CompositionContainer` sobre `packaging\Plugins\`, corridos con Windows PowerShell clásico
+  (por ser .NET Framework real, no PowerShell 7/.NET). Archivos copiados a
+  `%AppData%\MscrmTools\XrmToolBox\Plugins` del usuario tras cada fix para reintentar en vivo.
+- ⚠️ Sigue sin confirmarse con el usuario que el plugin ahora carga en su XrmToolBox real tras
+  el segundo fix (el fix está verificado por composición MEF fuera de proceso contra los
+  ensamblados reales del host, no por una corrida real del proceso `XrmToolBox.exe` todavía).
+  Falta también probar el flujo funcional completo (Extraer/Validar) contra Dataverse.
 
 ## Próximos pasos (en orden)
 
