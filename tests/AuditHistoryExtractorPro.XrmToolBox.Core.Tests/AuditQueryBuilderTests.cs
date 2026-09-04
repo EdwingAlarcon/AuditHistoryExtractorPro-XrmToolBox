@@ -37,5 +37,18 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Tests
             query.Criteria.Conditions.Should().Contain(c => c.AttributeName == "createdon" && c.Operator == ConditionOperator.OnOrAfter);
             query.Criteria.Conditions.Should().Contain(c => c.AttributeName == "action" && c.Operator == ConditionOperator.In);
         }
+
+        [Fact]
+        public void BuildConteo_MismoFiltroQueBuild_PeroSoloColumnaAuditId()
+        {
+            var filtros = new AuditQueryFilters { EntityLogicalName = "account" };
+
+            var query = AuditQueryBuilder.BuildConteo(filtros);
+
+            query.EntityName.Should().Be("audit");
+            query.ColumnSet.Columns.Should().BeEquivalentTo(new[] { "auditid" });
+            query.Criteria.Conditions.Should().Contain(c => c.AttributeName == "objecttypecode" && (string)c.Values[0] == "account");
+            query.LinkEntities.Should().BeEmpty();
+        }
     }
 }

@@ -13,10 +13,6 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Queries
     {
         public static QueryExpression Build(AuditQueryFilters filtros)
         {
-            if (filtros == null) throw new ArgumentNullException(nameof(filtros));
-            if (string.IsNullOrWhiteSpace(filtros.EntityLogicalName))
-                throw new ArgumentException("Debe indicar la entidad a auditar.", nameof(filtros));
-
             var query = new QueryExpression("audit")
             {
                 ColumnSet = new ColumnSet(
@@ -25,8 +21,37 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Queries
                 // Sin TopCount: Dataverse no permite combinarlo con paginación (PageInfo), que es
                 // como se recorre el resultado en PluginControl.EjecutarExtraccion. El límite de
                 // MaxRegistros se aplica ahí, cortando la paginación al alcanzarlo.
-                Orders = { new OrderExpression("createdon", OrderType.Descending) }
+                Orders = { new OrderExpression("createdon", OrderType.Descending) },
+                Criteria = ConstruirFiltro(filtros)
             };
+
+            var userLink = query.AddLink("systemuser", "userid", "systemuserid", JoinOperator.LeftOuter);
+            userLink.EntityAlias = "u";
+            userLink.Columns = new ColumnSet("fullname");
+
+            return query;
+        }
+
+        /// <summary>
+        /// Versión liviana de <see cref="Build"/> — mismo filtro, pero sin "changedata" ni el
+        /// join a systemuser, solo para contar cuántos registros hay antes de arrancar la
+        /// extracción real (progreso: "X de Y", tiempo restante estimado). Barata en comparación
+        /// con la extracción completa porque no trae el detalle de cada registro.
+        /// </summary>
+        public static QueryExpression BuildConteo(AuditQueryFilters filtros)
+        {
+            return new QueryExpression("audit")
+            {
+                ColumnSet = new ColumnSet("auditid"),
+                Criteria = ConstruirFiltro(filtros)
+            };
+        }
+
+        private static FilterExpression ConstruirFiltro(AuditQueryFilters filtros)
+        {
+            if (filtros == null) throw new ArgumentNullException(nameof(filtros));
+            if (string.IsNullOrWhiteSpace(filtros.EntityLogicalName))
+                throw new ArgumentException("Debe indicar la entidad a auditar.", nameof(filtros));
 
             var filter = new FilterExpression(LogicalOperator.And);
             filter.AddCondition("objecttypecode", ConditionOperator.Equal, filtros.EntityLogicalName);
@@ -43,13 +68,7 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Core.Queries
                 filter.AddCondition("action", ConditionOperator.In, valores);
             }
 
-            query.Criteria = filter;
-
-            var userLink = query.AddLink("systemuser", "userid", "systemuserid", JoinOperator.LeftOuter);
-            userLink.EntityAlias = "u";
-            userLink.Columns = new ColumnSet("fullname");
-
-            return query;
+            return filter;
         }
     }
 }

@@ -305,6 +305,19 @@ Resumen:
   `SolicitarCancelacion` conectado en `PluginControl` directo al `CancelWorker()` heredado de
   `PluginControlBase`.
 
+- ✅ **Progreso con tiempo transcurrido/restante estimado y velocidad** (2026-09-04, el usuario
+  preguntó si se podía agregar viendo que la app web ya lo tiene). `AuditQueryBuilder.BuildConteo`
+  (nuevo) arma una versión liviana de la misma consulta — mismo filtro, pero `ColumnSet` con
+  solo `auditid` y sin el join a `systemuser` — que `EjecutarExtraccion` corre primero, paginando
+  solo para sumar cuántos registros hay en total (mensaje "Contando registros a extraer..."), sin
+  pagar el costo de `changedata` ni de `RetrieveAuditDetailsRequest`. Con ese total conocido, el
+  mensaje de progreso (`PluginControl.FormatearProgreso`) arma "extraídos / total (%) ·
+  Transcurrido hh:mm:ss · Restante ~hh:mm:ss · N reg/s" — el cálculo de restante es
+  `(total - extraídos) / velocidad`, la misma fórmula que usa `ArchiveService.Eta` en la app web.
+  Sin conteo (poco probable, solo si esa fase se cancela) se muestra igual "extraídos" y
+  "Transcurrido" sin %/restante. `WorkAsyncInfo.MessageWidth` se subió de 340 (default) a 460
+  para que el mensaje, más largo ahora, entre mejor en el cartel de progreso del host.
+
 ## Próximos pasos (en orden)
 
 1. ~~Previsualización en grilla en `ExtraccionView`~~ — hecho.

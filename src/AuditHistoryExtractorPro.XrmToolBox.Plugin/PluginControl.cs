@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -92,8 +93,33 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
             {
                 Message = "Extrayendo historial de auditoría...",
                 IsCancelable = true,
+                MessageWidth = 460,
                 Work = (worker, args) =>
                 {
+                    var cronometro = Stopwatch.StartNew();
+
+                    // Conteo previo liviano (mismo filtro, sin changedata ni join a systemuser)
+                    // para poder mostrar "X de Y", % y tiempo restante estimado — mismo enfoque
+                    // que la app web (ArchiveService, cálculo de Eta a partir de ExpectedCount).
+                    // Sin esto no hay forma de estimar cuánto falta, solo cuánto se lleva.
+                    long? totalEsperado = null;
+                    var queryConteo = AuditQueryBuilder.BuildConteo(filtros);
+                    queryConteo.PageInfo = new Microsoft.Xrm.Sdk.Query.PagingInfo { Count = 5000, PageNumber = 1 };
+                    var contados = 0L;
+                    while (true)
+                    {
+                        if (worker.CancellationPending) { args.Cancel = true; return; }
+
+                        var pagina = Service.RetrieveMultiple(queryConteo);
+                        contados += pagina.Entities.Count;
+                        worker.ReportProgress(0, $"Contando registros a extraer... {contados:N0}");
+
+                        if (!pagina.MoreRecords) break;
+                        queryConteo.PageInfo.PageNumber++;
+                        queryConteo.PageInfo.PagingCookie = pagina.PagingCookie;
+                    }
+                    totalEsperado = contados;
+
                     var query = AuditQueryBuilder.Build(filtros);
 
                     // Paginación estándar de Dataverse (5000 filas por página), acotada por
@@ -115,11 +141,11 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                         // "changedata" de un RetrieveMultiple simple contra un entorno real —
                         // MapearEntidadAuditRecord ya cargó ahí el fallback vía changedata, esto
                         // lo reemplaza por el detalle correcto cuando Dataverse lo tiene.
-                        worker.ReportProgress(0, $"{registros.Count + paginaRegistros.Count} registros extraídos, trayendo detalle de cambios...");
+                        worker.ReportProgress(0, FormatearProgreso(registros.Count + paginaRegistros.Count, totalEsperado, cronometro, "trayendo detalle de cambios..."));
                         AuditDetailPopulator.Poblar(Service, paginaRegistros, () => worker.CancellationPending);
 
                         registros.AddRange(paginaRegistros);
-                        worker.ReportProgress(0, $"{registros.Count} registros extraídos...");
+                        worker.ReportProgress(0, FormatearProgreso(registros.Count, totalEsperado, cronometro, null));
 
                         if (worker.CancellationPending)
                         {
@@ -246,6 +272,42 @@ namespace AuditHistoryExtractorPro.XrmToolBox.Plugin
                 }
             });
         }
+
+        /// <summary>
+        /// Arma el mensaje de progreso de "Extraer": cuántos van de cuántos, % (si se conoce el
+        /// total), tiempo transcurrido, tiempo restante estimado (extrapolando la velocidad
+        /// actual, igual fórmula que usa la app web: restante = (total - extraídos) / velocidad)
+        /// y velocidad. Sin <paramref name="totalEsperado"/> (conteo previo falló o no corrió),
+        /// se muestra solo lo que sí se puede saber sin un total: extraídos y transcurrido.
+        /// </summary>
+        private static string FormatearProgreso(int extraidos, long? totalEsperado, Stopwatch cronometro, string sufijo)
+        {
+            var transcurrido = cronometro.Elapsed;
+            var partes = new List<string>();
+
+            partes.Add(totalEsperado.HasValue
+                ? $"{extraidos:N0} / {totalEsperado.Value:N0} ({(totalEsperado.Value > 0 ? extraidos * 100L / totalEsperado.Value : 100)}%)"
+                : $"{extraidos:N0} registros");
+
+            partes.Add($"Transcurrido {FormatearDuracion(transcurrido)}");
+
+            if (totalEsperado.HasValue && transcurrido.TotalSeconds >= 2 && extraidos > 0)
+            {
+                var velocidad = extraidos / transcurrido.TotalSeconds;
+                if (velocidad > 0)
+                {
+                    var restanteSegundos = Math.Max(0, (totalEsperado.Value - extraidos) / velocidad);
+                    partes.Add($"Restante ~{FormatearDuracion(TimeSpan.FromSeconds(restanteSegundos))}");
+                    partes.Add($"{velocidad:N1} reg/s");
+                }
+            }
+
+            var mensaje = string.Join(" · ", partes);
+            return string.IsNullOrEmpty(sufijo) ? mensaje : $"{mensaje}\n{sufijo}";
+        }
+
+        private static string FormatearDuracion(TimeSpan ts) =>
+            ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss");
 
         private static AuditRecord MapearEntidadAuditRecord(Entity e)
         {
