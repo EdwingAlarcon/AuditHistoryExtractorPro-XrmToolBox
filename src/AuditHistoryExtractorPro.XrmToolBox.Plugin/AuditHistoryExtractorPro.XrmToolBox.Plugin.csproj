@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>AuditHistoryExtractorPro.XrmToolBox.Plugin</AssemblyName>
+    <RootNamespace>AuditHistoryExtractorPro.XrmToolBox.Plugin</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Interfaz IXrmToolBoxPlugin, PluginControlBase, WorkAsync, SettingsHelper -->
+    <PackageReference Include="XrmToolBoxPackage" Version="1.2023.10.67" />
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.51" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AuditHistoryExtractorPro.XrmToolBox.Core\AuditHistoryExtractorPro.XrmToolBox.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Resources\PluginPackage.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

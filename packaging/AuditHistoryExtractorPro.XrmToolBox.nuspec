@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>AuditHistoryExtractorPro.XrmToolBox</id>
+    <version>0.1.0</version>
+    <title>Audit History Extractor Pro</title>
+    <authors>Edwing Alarcón</authors>
+    <owners>Edwing Alarcón</owners>
+    <description>
+      Extrae, exporta (Excel/CSV/JSON) y valida (spot-check) historial de auditoría de
+      Dataverse bajo demanda, dentro de XrmToolBox. Fase inicial de distribución interna;
+      publicación al Plugin Store planeada una vez validado con usuarios reales.
+    </description>
+    <releaseNotes>0.1.0: primera versión interna. Extracción + exportación + validación básica.</releaseNotes>
+    <tags>XrmToolBox Dataverse Dynamics365 Auditoria Audit</tags>
+    <projectUrl>https://github.com/EdwingAlarcon/AuditHistoryExtractorPro-XrmToolBox</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <dependencies>
+      <!--
+        No se declara XrmToolBox.Extensibility/XrmToolBoxPackage acá: el host ya la trae
+        cargada en el proceso (declararla puede duplicar/entrar en conflicto con la del host).
+        Sí se declaran las dependencias de terceros que el host NO trae y que Core.dll
+        necesita en runtime (Newtonsoft.Json el host lo trae, pero se fija igual por las dudas
+        de compatibilidad de versión).
+      -->
+      <group targetFramework="net462">
+        <dependency id="ClosedXML" version="0.102.2" />
+        <dependency id="CsvHelper" version="30.0.1" />
+        <dependency id="Newtonsoft.Json" version="13.0.3" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\bin\Release\net462\AuditHistoryExtractorPro.XrmToolBox.Plugin.dll" target="lib\net462" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Core\bin\Release\net462\AuditHistoryExtractorPro.XrmToolBox.Core.dll" target="lib\net462" />
+    <file src="..\src\AuditHistoryExtractorPro.XrmToolBox.Plugin\Resources\PluginPackage.png" target="content\PluginPackage.png" />
+  </files>
+</package>
