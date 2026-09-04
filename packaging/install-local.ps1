@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Copia los archivos del plugin (ya juntados por el build en Release en packaging\Plugins\)
     directo a la carpeta Plugins de tu instalación de XrmToolBox.

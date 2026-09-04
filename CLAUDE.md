@@ -155,10 +155,44 @@ Resumen:
   `CompositionContainer` sobre `packaging\Plugins\`, corridos con Windows PowerShell clásico
   (por ser .NET Framework real, no PowerShell 7/.NET). Archivos copiados a
   `%AppData%\MscrmTools\XrmToolBox\Plugins` del usuario tras cada fix para reintentar en vivo.
-- ⚠️ Sigue sin confirmarse con el usuario que el plugin ahora carga en su XrmToolBox real tras
-  el segundo fix (el fix está verificado por composición MEF fuera de proceso contra los
-  ensamblados reales del host, no por una corrida real del proceso `XrmToolBox.exe` todavía).
-  Falta también probar el flujo funcional completo (Extraer/Validar) contra Dataverse.
+- ✅ **TERCER Y CUARTO BUG CRÍTICO CORREGIDOS (2026-09-04, misma sesión, mismo síntoma "no
+  aparece").** Con los dos bugs anteriores resueltos, el usuario actualizó a XrmToolBox
+  `1.2026.8.76` y el plugin seguía sin aparecer — pero esta vez sin ningún error visible. Se
+  investigó con evidencia directa contra la instalación real del usuario (no solo simulación):
+
+  1. **Ícono vacío tumbaba XrmToolBox al abrir.** `Plugin.cs` tenía
+     `[ExportMetadata("SmallImageBase64", "")]`/`BigImageBase64` en blanco desde el principio —
+     nunca se había probado esa parte del pipeline (la verificación MEF anterior solo chequeaba
+     que el export existiera, no que el host lograra construir el tile visual). El Visor de
+     eventos de Windows (`Get-WinEvent`, log `Application`, proveedor `.NET Runtime`/`Application
+     Error`) mostró crashes repetidos de `XrmToolBox.exe` con excepción no controlada en el
+     mensaje de UI justo en el rango horario en que el usuario decía "no aparece" — coincide con
+     el host intentando decodificar un Base64 vacío como imagen al armar el tile del plugin.
+     Se generó el ícono real en Base64 (a partir de `Resources\PluginPackage.png`, con Python/PIL:
+     32×32 para `SmallImageBase64`, 150×150 para `BigImageBase64`) y se embebió en `Plugin.cs`.
+     Tras el fix, XrmToolBox dejó de crashear (confirmado abriendo el proceso real y monitoreando
+     el Visor de eventos: cero crashes nuevos).
+  2. **`SecondaryFontColor` faltante excluía el plugin en silencio (sin crash).** Con el crash
+     resuelto, el plugin seguía sin aparecer en el buscador de herramientas (confirmado con
+     capturas de pantalla reales de la ventana de XrmToolBox abierta). Se encontró
+     `Plugins\manifest.json` (el catálogo que el host arma escaneando `Plugins\` — contiene
+     `ScannedAssemblies`, todo DLL encontrado, y `PluginMetadata`, solo los que el host logra
+     materializar como plugin válido): nuestros DLLs aparecían en `ScannedAssemblies` pero nunca
+     en `PluginMetadata`. Comparando contra las 371 entradas reales de `PluginMetadata` de otros
+     plugins instalados, **las 371 tenían `SecondaryFontColor` seteado — ninguna vacía** — campo
+     que `Plugin.cs` no declaraba. Causa probable: el host arma esa lista vía una consulta MEF con
+     vista de metadata tipada (a diferencia de la consulta simple `GetExportedValues<T>()` sin
+     vista que usamos para verificar, que sí encontraba el export igual) — sin esa propiedad, el
+     export queda excluido de esa consulta en particular, en silencio. Se agregó
+     `[ExportMetadata("SecondaryFontColor", "Gray")]`. **Verificado de punta a punta abriendo el
+     proceso real `XrmToolBox.exe 1.2026.8.76` del usuario, tomando captura de pantalla real y
+     buscando "Audit" en el buscador de herramientas: "Audit History Extractor Pro" aparece con
+     ícono, descripción y autor correctos.** Primera confirmación visual real de que el plugin
+     carga en un XrmToolBox real, no solo por composición MEF fuera de proceso.
+
+  De paso se corrigió un bug menor preexistente en `packaging\install-local.ps1`: sin BOM UTF-8,
+  Windows PowerShell clásico (5.1) interpreta mal los acentos del archivo y tira
+  `TerminatorExpectedAtEndOfString` — se le agregó BOM.
 
 ## Próximos pasos (en orden)
 
@@ -166,13 +200,15 @@ Resumen:
 2. ~~Generar `PluginPackage.png` real~~ — hecho.
 3. ~~CI, cancelación, límite visible, combo de entidades, resumen de cambios en grilla,
    versión centralizada~~ — hecho (ver arriba).
-4. **Confirmar con el usuario que el plugin ahora aparece en su XrmToolBox real** (recompilar,
-   volver a copiar `packaging\Plugins\` — el fix de MEF cambió `Plugin.dll`) y seguir con
-   `docs/README.md#cómo-probar-en-una-instancia-real` para el resto del flujo funcional
-   (Extraer/Validar contra Dataverse, combo de entidades, cancelación).
-5. Empaquetar y distribuir internamente (ya validado que el `.nupkg` empaqueta correctamente —
-   falta el paso 4 antes de considerar esto "distribuible").
-6. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
+4. ~~Confirmar con el usuario que el plugin ahora aparece en su XrmToolBox real~~ — hecho y
+   verificado visualmente (ver bugs #3 y #4 arriba).
+5. **Probar el flujo funcional completo contra Dataverse** — seguir con
+   `docs/README.md#cómo-probar-en-una-instancia-real`: "Extraer" (combo de entidades, filtros,
+   grilla, `ResumenCambios` contra el XML `changedata` real, cancelación, `MaxRegistros`,
+   exportar a xlsx/csv/json) y "Validar" (buscar por `AuditId`, comparar contra Dataverse).
+6. Empaquetar y distribuir internamente (el `.nupkg` empaqueta correctamente; falta el paso 5
+   antes de considerar esto "distribuible").
+7. Recolectar feedback de 2-3 usuarios antes de evaluar el checklist de certificación pública
    del Plugin Store.
 
 ## Convenciones
